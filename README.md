@@ -1,5 +1,5 @@
 # 🔐 Automated Security Scanner for CI/CD (ZAP + GPT + GitHub Actions)
-
+# some code change
 Welcome to the **CI/CD-integrated Security Scanner** — an automated system that:
 
 - 🕷️ Scans your web app using [ZAP](https://www.zaproxy.org/)
