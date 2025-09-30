@@ -1,4 +1,4 @@
-# 🔐 Automated Security Scanner for CI/CD (ZAP + GPT + GitHub Actions)
+# 🔐 Automated Security Scanner for CI/CD (ZAP + GPT + GitHub Actions) DEMO 
 
 Welcome to the **CI/CD-integrated Security Scanner** — an automated system that:
 
