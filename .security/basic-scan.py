@@ -11,12 +11,12 @@ from github import post_pr_comment
 load_dotenv()
 
 # Load scan config
-CONFIG_PATH = "config.yaml"
+CONFIG_PATH = ".security/config.yaml"
 if os.path.exists(CONFIG_PATH):
     with open(CONFIG_PATH, "r") as config_file:
         config = yaml.safe_load(config_file)
 else:
-    raise FileNotFoundError("Missing config.yaml file in project directory.")
+    raise FileNotFoundError("Missing .security/config.yaml file in project directory.")
 
 scans_config = config.get("scans", {})
 run_spider = scans_config.get("spider", True)
@@ -30,7 +30,7 @@ print(f"Selected scans: 🕷️ Spider: {run_spider} | ⚡ AJAX Spider: {run_aja
 
 # Basic validation: at least one scan must be selected
 if not (run_spider or run_ajax_spider or run_passive or run_active):
-    raise ValueError("❌ No scans selected! Please enable at least one scan type in config.yaml.")
+    raise ValueError("❌ No scans selected! Please enable at least one scan type in .security/config.yaml.")
 
 # Get values
 ZAP_PORT = int(os.getenv("ZAP_PORT", 8090))

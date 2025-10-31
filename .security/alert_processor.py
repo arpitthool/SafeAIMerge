@@ -14,12 +14,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 # Load filtering preferences from YAML config
-CONFIG_PATH = "config.yaml"
+CONFIG_PATH = ".security/config.yaml"
 if os.path.exists(CONFIG_PATH):
     with open(CONFIG_PATH, "r") as config_file:
         config = yaml.safe_load(config_file)
 else:
-    raise FileNotFoundError("Missing config.yaml file in project directory.")
+    raise FileNotFoundError("Missing .security/config.yaml file in project directory.")
 
 # Get the max number of alerts to include in the report
 alerts_limit = config.get("alerts_limit", 5)
