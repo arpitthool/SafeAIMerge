@@ -56,10 +56,10 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r .security/requirements.txt
 
       - name: Run ZAP Security Scan
-        run: python3 basic-scan.py
+        run: python3 .security/basic-scan.py
         env:
           ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
           ZAP_PORT: 8090

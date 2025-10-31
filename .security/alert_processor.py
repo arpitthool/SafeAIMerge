@@ -43,7 +43,7 @@ def load_prompt(path: str, default: str) -> str:
 def get_summary(alert):
     """Summarize an individual alert using ChatGPT and a user-defined prompt."""
     system_prompt = load_prompt(
-        "prompt_alert.txt",
+        ".security/prompt_alert.txt",
         "You are a cybersecurity expert. Summarize the following security alert."
     )
 
@@ -75,7 +75,7 @@ def generate_final_summary(alert_summaries, all_alerts, summarized_alerts, alert
     summaries_text = "\n\n".join(item["summary"] for item in alert_summaries)
 
     system_prompt = load_prompt(
-        "prompt_final.txt",
+        ".security/prompt_final.txt",
         "You are a security engineer. Analyze the provided summaries and generate a high-level report with urgent issues and recommendations."
     )
 
