@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 import time
 import os
+import sys
 import yaml
 from dotenv import load_dotenv
 from zapv2 import ZAPv2
+
+# Add .security directory to Python path so imports work when run from project root
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, script_dir)
+
 from alert_processor import process_alerts
 from github import post_pr_comment
 

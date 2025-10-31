@@ -25,7 +25,7 @@ All of this is packaged into a **configurable, developer-friendly GitHub Action*
 - ✅ Auto-summarizes alerts with GPT for human-readable feedback
 - ✅ Adds comments directly on PRs
 - ✅ Pipeline gating: fail PRs with critical risks
-- ✅ Customizable via `config.yaml`
+- ✅ Customizable via `./security/config.yaml`
 
 ---
 
@@ -45,7 +45,7 @@ All of this is packaged into a **configurable, developer-friendly GitHub Action*
 
 ### 1. 🍴 Fork or clone this repo
 
-You can also copy the `.github/workflows/zap.yaml`, `basic_scan.py`, and related files into your own repo.
+You can also copy the `.github/workflows/zap.yaml`, `./security/basic_scan.py`, and related files into your own repo.
 
 ---
 
@@ -62,7 +62,7 @@ Go to your repo → **Settings → Secrets and variables → Actions** → Add t
 
 ### 3. 🛠️ Configure your scan settings
 
-Edit `config.yaml` in your repo:
+Edit `.security/config.yaml` in your repo:
 
 ```yaml
 summarize_levels:
