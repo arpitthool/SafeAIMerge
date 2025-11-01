@@ -15,25 +15,36 @@ jobs:
   zap_scan:
     runs-on: self-hosted
 
+    env:
+      WEB_APP_HOST_PORT: 3000
+      WEB_APP_CONTAINER_PORT: 3000
+      ZAP_PORT: 8090
+
     steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Create Docker network
         run: docker network create zapnet
 
+      # - name: Build Docker image
+      #   run: docker build -t my-web-app-image .
+
       - name: Start web app using docker
         run: |
-          docker run -d --name my-web-app --network zapnet -p 127.0.0.1:3000:3000 bkimminich/juice-shop
+          docker run -d --name my-web-app --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
           echo "Waiting for Juice Shop..."
-          until curl -sSf http://localhost:3000; do sleep 5; done
+          until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
 
       - name: Start ZAP server
         run: |
           docker pull ghcr.io/zaproxy/zaproxy:stable
           docker pull zaproxy/zap-stable
           docker run -d --name zap --network zapnet \
-            -p 8090:8090 \
+            -p ${{ env.ZAP_PORT }}:${{ env.ZAP_PORT }} \
             zaproxy/zap-stable \
-            zap.sh -daemon -port 8090 -host 0.0.0.0 \
+            zap.sh -daemon -port ${{ env.ZAP_PORT }} -host 0.0.0.0 \
               -config api.addrs.addr.name=.* \
               -config api.addrs.addr.regex=true \
               -config api.key=${{ secrets.ZAP_API_KEY }}
@@ -41,10 +52,7 @@ jobs:
       - name: Wait for ZAP to start
         run: |
           echo "Waiting for ZAP..."
-          until curl -s http://localhost:8090; do sleep 5; done
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
+          until curl -s http://localhost:${{ env.ZAP_PORT }}; do sleep 5; done
 
       # Create a place holder report file. Replace this with your actual scan output.
       - name: Create a sample file
@@ -62,8 +70,8 @@ jobs:
         run: python3 .security/basic-scan.py
         env:
           ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
-          ZAP_PORT: 8090
-          TARGET_URL: http://my-web-app:3000
+          ZAP_PORT: ${{ env.ZAP_PORT }}
+          TARGET_URL: http://my-web-app:${{ env.WEB_APP_CONTAINER_PORT }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ZAP_HOST: http://localhost
           GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
