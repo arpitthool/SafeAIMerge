@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 import time
 import os
+import sys
 import yaml
 from dotenv import load_dotenv
 from zapv2 import ZAPv2
+
+# Add .security directory to Python path so imports work when run from project root
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, script_dir)
+
 from alert_processor import process_alerts
 from github import post_pr_comment
 
@@ -11,12 +17,12 @@ from github import post_pr_comment
 load_dotenv()
 
 # Load scan config
-CONFIG_PATH = "config.yaml"
+CONFIG_PATH = ".security/config.yaml"
 if os.path.exists(CONFIG_PATH):
     with open(CONFIG_PATH, "r") as config_file:
         config = yaml.safe_load(config_file)
 else:
-    raise FileNotFoundError("Missing config.yaml file in project directory.")
+    raise FileNotFoundError("Missing .security/config.yaml file in project directory.")
 
 scans_config = config.get("scans", {})
 run_spider = scans_config.get("spider", True)
@@ -30,7 +36,7 @@ print(f"Selected scans: 🕷️ Spider: {run_spider} | ⚡ AJAX Spider: {run_aja
 
 # Basic validation: at least one scan must be selected
 if not (run_spider or run_ajax_spider or run_passive or run_active):
-    raise ValueError("❌ No scans selected! Please enable at least one scan type in config.yaml.")
+    raise ValueError("❌ No scans selected! Please enable at least one scan type in .security/config.yaml.")
 
 # Get values
 ZAP_PORT = int(os.getenv("ZAP_PORT", 8090))
