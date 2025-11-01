@@ -25,7 +25,7 @@ All of this is packaged into a **configurable, developer-friendly GitHub Action*
 - ✅ Auto-summarizes alerts with GPT for human-readable feedback
 - ✅ Adds comments directly on PRs
 - ✅ Pipeline gating: fail PRs with critical risks
-- ✅ Customizable via `config.yaml`
+- ✅ Customizable via `.security/config.yaml`
 
 ---
 
@@ -41,11 +41,58 @@ All of this is packaged into a **configurable, developer-friendly GitHub Action*
     H --> I[Uploads as GitHub Artifact];
     F --> J[Optional: Fails pipeline on high-risk alert];
 
+## 📁 Project Structure
+
+The project is organized to be easily copied into your existing web app repository. All security scanning code is contained in the `.security/` directory (hidden directory, won't clutter your project root).
+
+```
+your-web-app/
+├── .security/                          # Security scanning module (copy this entire directory)
+│   ├── __init__.py                     # Makes .security/ a Python package
+│   ├── basic-scan.py                   # Main scanning script (runs ZAP scans)
+│   ├── alert_processor.py              # Processes and summarizes alerts using GPT
+│   ├── github.py                       # Handles GitHub API interactions (PR comments)
+│   ├── config.yaml                     # Configuration file (scan settings, risk levels)
+│   ├── prompt_alert.txt                # GPT prompt template for individual alerts
+│   ├── prompt_final.txt                # GPT prompt template for final summary
+│   └── requirements.txt                # Python dependencies
+├── .github/
+│   └── workflows/
+│       └── zap.yaml                    # GitHub Actions workflow (copy this)
+├── README.md                            # This file
+└── LICENSE                              # License file
+```
+
+### File Descriptions
+
+**`.security/` directory:**
+- **`__init__.py`**: Makes `.security/` a Python package, enabling clean imports
+- **`basic-scan.py`**: Main entry point that orchestrates ZAP scans (spider, AJAX spider, passive, active scans) and processes results
+- **`alert_processor.py`**: Core logic for filtering alerts, calling GPT API for summarization, and generating the security report
+- **`github.py`**: Utilities for posting PR comments via GitHub API
+- **`config.yaml`**: User-configurable settings for scan types, risk level filtering, and pipeline gating
+- **`prompt_alert.txt`**: Customizable prompt template for GPT to summarize individual security alerts
+- **`prompt_final.txt`**: Customizable prompt template for GPT to generate high-level security summary
+- **`requirements.txt`**: Python package dependencies (openai, dotenv, zaproxy, pyyaml)
+
+**`.github/workflows/zap.yaml`**: GitHub Actions workflow that runs the security scan on PRs, schedules, or manual triggers
+
+**Generated files** (not in repo):
+- **`security_report.txt`**: Generated during each scan run, contains detailed alert summaries and final report (uploaded as artifact)
+
+### Copying to Your Project
+
+Simply copy the `.security/` directory and `.github/workflows/zap.yaml` into your existing web app repository. The hidden `.security/` directory keeps your project root clean while containing all security scanning functionality.
+
 ## ⚙️ Setup
 
-### 1. 🍴 Fork or clone this repo
+### 1. 🍴 Copy files to your repository
 
-You can also copy the `.github/workflows/zap.yaml`, `basic_scan.py`, and related files into your own repo.
+Copy the following into your web app repository:
+- **`.security/`** directory (all files within)
+- **`.github/workflows/zap.yaml`** (create `.github/workflows/` if it doesn't exist)
+
+This keeps your project organized with all security scanning code in a hidden directory.
 
 ---
 
@@ -62,7 +109,7 @@ Go to your repo → **Settings → Secrets and variables → Actions** → Add t
 
 ### 3. 🛠️ Configure your scan settings
 
-Edit `config.yaml` in your repo:
+Edit `.security/config.yaml` in your repo:
 
 ```yaml
 summarize_levels:
@@ -145,12 +192,12 @@ Security scan detected 9 total alerts.
 
 Yes — the scripts can also be run locally or inside any CI tool that supports Docker + Python.
 
-### What if I don’t want the pipeline to fail?
+### What if I don't want the pipeline to fail?
 
-Just leave `fail_on_levels:` empty in `config.yaml`.
+Just leave `fail_on_levels:` empty in `.security/config.yaml`.
 
 ### What GPT model is used?
 
-By default, it uses `gpt-4`, but you can customize this in `alert_processor.py`.
+By default, it uses `gpt-4`, but you can customize this in `.security/alert_processor.py`.
 
 

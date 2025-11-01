@@ -14,12 +14,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 # Load filtering preferences from YAML config
-CONFIG_PATH = "config.yaml"
+CONFIG_PATH = ".security/config.yaml"
 if os.path.exists(CONFIG_PATH):
     with open(CONFIG_PATH, "r") as config_file:
         config = yaml.safe_load(config_file)
 else:
-    raise FileNotFoundError("Missing config.yaml file in project directory.")
+    raise FileNotFoundError("Missing .security/config.yaml file in project directory.")
 
 # Get the max number of alerts to include in the report
 alerts_limit = config.get("alerts_limit", 5)
@@ -43,7 +43,7 @@ def load_prompt(path: str, default: str) -> str:
 def get_summary(alert):
     """Summarize an individual alert using ChatGPT and a user-defined prompt."""
     system_prompt = load_prompt(
-        "prompt_alert.txt",
+        ".security/prompt_alert.txt",
         "You are a cybersecurity expert. Summarize the following security alert."
     )
 
@@ -75,7 +75,7 @@ def generate_final_summary(alert_summaries, all_alerts, summarized_alerts, alert
     summaries_text = "\n\n".join(item["summary"] for item in alert_summaries)
 
     system_prompt = load_prompt(
-        "prompt_final.txt",
+        ".security/prompt_final.txt",
         "You are a security engineer. Analyze the provided summaries and generate a high-level report with urgent issues and recommendations."
     )
 
