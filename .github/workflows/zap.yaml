@@ -25,6 +25,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Print PR code changes
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "=== PR #${{ github.event.pull_request.number }} Changes ==="
+          echo ""
+          echo "Base branch: ${{ github.base_ref }}"
+          echo "PR branch: ${{ github.head_ref }}"
+          echo ""
+          echo "Changed files:"
+          git diff --name-status origin/${{ github.base_ref }}...HEAD || echo "No changes or branch comparison issue"
+          echo ""
+          echo "--- Full diff ---"
+          git diff origin/${{ github.base_ref }}...HEAD || echo "No diff available"
+
       - name: Create Docker network
         run: docker network create zapnet
 
