@@ -24,6 +24,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history to compare branches
 
       - name: Print PR code changes
         if: github.event_name == 'pull_request'
@@ -33,11 +35,17 @@ jobs:
           echo "Base branch: ${{ github.base_ref }}"
           echo "PR branch: ${{ github.head_ref }}"
           echo ""
+          # Fetch all refs to ensure we have both branches
+          git fetch --all --depth=0 || true
+          # Use SHA-based comparison (most reliable)
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo ""
           echo "Changed files:"
-          git diff --name-status origin/${{ github.base_ref }}...HEAD || echo "No changes or branch comparison issue"
+          git diff --name-status $BASE_SHA..$HEAD_SHA || echo "No changes found"
           echo ""
           echo "--- Full diff ---"
-          git diff origin/${{ github.base_ref }}...HEAD || echo "No diff available"
+          git diff $BASE_SHA..$HEAD_SHA || echo "No diff available"
 
       - name: Create Docker network
         run: docker network create zapnet
