@@ -124,6 +124,7 @@ else:
 suffix = os.getenv("GITHUB_REF_NAME", "")   # main or pr_branch or empty if not a PR
 json_report_filename = f"security_report_{suffix}.json"
 sorted_alerts = sort_and_save_alerts(zap.core.alerts(), json_report_filename)
+print(f"📄 JSON report saved as: {json_report_filename}")
 
 # ✅ Process and summarize alerts
 # final_summary = process_alerts(sorted_alerts)
