@@ -112,7 +112,8 @@ json_report_filename = f"security_report_{suffix}.json"
 sorted_alerts = sort_and_save_alerts(zap.core.alerts(), json_report_filename)
 
 # ✅ Process and summarize alerts
-final_summary = process_alerts(sorted_alerts)
+# final_summary = process_alerts(sorted_alerts)
+final_summary = "final summary"
 
 # ✅ Post final summary as PR comment
 artifact_link = f"https://github.com/{GITHUB_REPO}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"
