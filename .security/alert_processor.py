@@ -114,14 +114,8 @@ def generate_final_summary(alert_summaries, all_alerts, summarized_alerts, alert
 
     return stats_intro + response.choices[0].message.content
 
-def process_alerts(alerts):
-    """Main entry to filter alerts, selectively summarize, and generate the final report."""
-    alert_summaries = []
-    fail_risk_alerts = 0  # Counter for pipeline-failing alerts
-    total_processed_alerts = 0  # To respect alerts_limit
-
-    print(f"✅ Starting to process {len(alerts)} alert(s).")
-
+def sort_alerts_by_risk(alerts):
+    """Sort alerts by risk"""
     # Define the desired order of risk levels for sorting
     risk_order = {"high": 0, "medium": 1, "low": 2, "informational": 3}
 
@@ -132,13 +126,27 @@ def process_alerts(alerts):
 
     sorted_alerts = sorted(alerts, key=alert_risk_key)
 
-    # Save sorted JSON report for comparison
-    risk_counts = Counter(alert.get("risk", "Unknown").capitalize() for alert in sorted_alerts)
+    return sorted_alerts
 
-    with open("security_report.json", "w", encoding="utf-8") as f:
+def sort_and_save_alerts(alerts, filename: str):
+    sorted_alerts = sort_alerts_by_risk(alerts)
+
+    with open(filename, "w", encoding="utf-8") as f:
         json.dump(sorted_alerts, f, indent=2)
-    
-    print("📄 JSON report saved as: security_report.json")
+    print(f"📄 JSON report saved as: {filename}")
+    return sorted_alerts
+
+def process_alerts(alerts):
+    """Main entry to filter alerts, selectively summarize, and generate the final report."""
+    alert_summaries = []
+    fail_risk_alerts = 0  # Counter for pipeline-failing alerts
+    total_processed_alerts = 0  # To respect alerts_limit
+
+    print(f"✅ Starting to process {len(alerts)} alert(s).")
+
+    sorted_alerts = sort_and_save_alerts(alerts, "security_report.json")
+
+    risk_counts = Counter(alert.get("risk", "Unknown").capitalize() for alert in sorted_alerts)
 
     for alert in sorted_alerts:
         risk_level = alert.get("risk", "").lower()
