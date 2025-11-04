@@ -1,4 +1,4 @@
-# 🔐 Automated Security Scanner for CI/CD (ZAP + GPT + GitHub Actions) DEMO 
+# 🔐 Automated Security Scanner for CI/CD (ZAP + GPT + GitHub Actions)
 
 ![ZAP-LLM-tool - block-diagram](https://github.com/user-attachments/assets/855aad2c-0c76-4609-b951-447f8e5427b8)
 
