@@ -125,28 +125,9 @@ def process_alerts(alerts):
     # Save JSON report for comparison
     risk_counts = Counter(alert.get("risk", "Unknown").capitalize() for alert in alerts)
 
-    json_report = {
-        "alerts": [
-            {
-                "alertRef": item["alert"].get("alertRef"),  # Unique identifier for comparison
-                "pluginId": item["alert"].get("pluginId"),
-                "name": item["alert"].get("name"),
-                "risk": item["alert"].get("risk"),
-                "confidence": item["alert"].get("confidence"),
-                "url": item["alert"].get("url"),
-                "cweid": item["alert"].get("cweid"),
-                "wascid": item["alert"].get("wascid"),
-                "description": item["alert"].get("description"),
-                "solution": item["alert"].get("solution"),
-                "summary": item["summary"]
-            }
-            for item in alerts
-        ]
-    }
-
     # sort the json_report by risk
     with open("security_report.json", "w", encoding="utf-8") as f:
-        json.dump(json_report, f, indent=2)
+        json.dump(alerts, f, indent=2)
     
     print("📄 JSON report saved as: security_report.json")
 
