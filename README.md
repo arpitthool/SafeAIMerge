@@ -23,6 +23,7 @@ All of this is packaged into a **configurable, developer-friendly GitHub Action*
 - ✅ Works with any web app (static or dynamic) that runs in Docker
 - ✅ Supports ZAP Spider, AJAX Spider, Passive Scan, Active Scan
 - ✅ Auto-summarizes alerts with GPT for human-readable feedback
+- ✅ Context-aware suggestions: LLM analyzes PR code changes to provide targeted security fix recommendations
 - ✅ Adds comments directly on PRs
 - ✅ Pipeline gating: fail PRs with critical risks
 - ✅ Customizable via `.security/config.yaml`
@@ -32,14 +33,15 @@ All of this is packaged into a **configurable, developer-friendly GitHub Action*
 ## 🧩 How It Works
 
     A[Pull Request Created] --> B[GitHub Action Triggers];
-    B --> C[Dockerized Web App Starts];
-    C --> D[ZAP Runs Scans];
-    D --> E[ZAP Generates Alerts];
-    E --> F[Python summarizes alerts using GPT];
-    F --> G[Posts Summary as PR Comment];
-    F --> H[Creates security_report.txt];
-    H --> I[Uploads as GitHub Artifact];
-    F --> J[Optional: Fails pipeline on high-risk alert];
+    B --> C[Capture PR Code Changes];
+    C --> D[Dockerized Web App Starts];
+    D --> E[ZAP Runs Scans];
+    E --> F[ZAP Generates Alerts];
+    F --> G[Python summarizes alerts using GPT with PR context];
+    G --> H[Posts Summary as PR Comment];
+    G --> I[Creates security_report.txt];
+    I --> J[Uploads as GitHub Artifact];
+    G --> K[Optional: Fails pipeline on high-risk alert];
 
 ## 📁 Project Structure
 
@@ -79,6 +81,7 @@ your-web-app/
 
 **Generated files** (not in repo):
 - **`security_report.txt`**: Generated during each scan run, contains detailed alert summaries and final report (uploaded as artifact)
+- **`pr_changes.txt`**: Automatically created by the workflow for PR events, contains the code diff for context-aware security suggestions
 
 ### Copying to Your Project
 
@@ -167,6 +170,7 @@ Your scan runs automatically on:
 
 - 📝 `security_report.txt` uploaded as a GitHub artifact  
 - 🧠 LLM-generated summary posted as a **comment** on the PR  
+- 🎯 Context-aware suggestions: For PR events, the LLM analyzes your code changes and provides targeted security fix recommendations
 - ❌ Optional CI failure if critical risk alerts are found
 
 🧪 Example Report Snippet
@@ -199,5 +203,14 @@ Just leave `fail_on_levels:` empty in `.security/config.yaml`.
 ### What GPT model is used?
 
 By default, it uses `gpt-4`, but you can customize this in `.security/alert_processor.py`.
+
+### How does the PR code context feature work?
+
+When scanning a Pull Request, the workflow automatically captures the code changes (diff) between the base and head branches. This diff is included in the LLM prompts when summarizing security alerts, allowing the AI to:
+- Understand what code was changed in the PR
+- Provide specific, targeted fix suggestions that account for your changes
+- Identify if new vulnerabilities were introduced by the PR changes
+
+The PR code changes are stored in `pr_changes.txt` during the workflow run and automatically loaded by `alert_processor.py` when available. Large diffs are automatically truncated to stay within token limits.
 
 
