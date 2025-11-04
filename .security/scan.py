@@ -127,9 +127,8 @@ sorted_alerts = sort_and_save_alerts(zap.core.alerts(), json_report_filename)
 print(f"📄 JSON report saved as: {json_report_filename}")
 
 # ✅ Process and summarize alerts
-# final_summary = process_alerts(sorted_alerts)
-final_summary = "final summary"
-
-# ✅ Post final summary as PR comment
-artifact_link = f"https://github.com/{GITHUB_REPO}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"
-post_pr_comment(f"### Security Scan Summary 🚨\n\n```\n{final_summary}\n```\n📂 **[Download Full Report]({artifact_link})**")
+if suffix == "pr":
+    final_summary = process_alerts(sorted_alerts)
+    # ✅ Post final summary as PR comment
+    artifact_link = f"https://github.com/{GITHUB_REPO}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"
+    post_pr_comment(f"### Security Scan Summary 🚨\n\n```\n{final_summary}\n```\n📂 **[Download Full Report]({artifact_link})**")
