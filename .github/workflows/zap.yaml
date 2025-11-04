@@ -83,8 +83,11 @@ jobs:
       - name: Create a sample file for security report TXT
         run: echo "This is a test file." > security_report.txt
 
-      - name: Create a sample file for security report JSON
-        run: echo "This is a test file." > security_report.json
+      - name: Create a sample file for security report JSON (Main)
+        run: echo "This is a test file." > security_report_main.json
+
+      - name: Create a sample file for security report JSON (PR)
+        run: echo "This is a test file." > security_report_pr.json
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -112,7 +115,8 @@ jobs:
           name: security-report
           path: |
             security_report.txt
-            security_report.json
+            security_report_main.json
+            security_report_pr.json
 
       - name: Terminate web app
         if: always()
