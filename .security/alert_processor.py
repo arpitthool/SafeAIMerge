@@ -122,16 +122,25 @@ def process_alerts(alerts):
 
     print(f"✅ Starting to process {len(alerts)} alert(s).")
 
-    # Save JSON report for comparison
-    risk_counts = Counter(alert.get("risk", "Unknown").capitalize() for alert in alerts)
+    # Define the desired order of risk levels for sorting
+    risk_order = {"high": 0, "medium": 1, "low": 2, "informational": 3}
 
-    # sort the json_report by risk
+    # Sort alerts by risk before further processing or saving
+    def alert_risk_key(alert):
+        # Normalize risk string to lowercase and fall back to a large value if missing or unexpected risk
+        return risk_order.get(str(alert.get("risk", "")).lower(), 99)
+
+    sorted_alerts = sorted(alerts, key=alert_risk_key)
+
+    # Save sorted JSON report for comparison
+    risk_counts = Counter(alert.get("risk", "Unknown").capitalize() for alert in sorted_alerts)
+
     with open("security_report.json", "w", encoding="utf-8") as f:
-        json.dump(alerts, f, indent=2)
+        json.dump(sorted_alerts, f, indent=2)
     
     print("📄 JSON report saved as: security_report.json")
 
-    for alert in alerts:
+    for alert in sorted_alerts:
         risk_level = alert.get("risk", "").lower()
 
         # Ignore alerts in ignore_levels
