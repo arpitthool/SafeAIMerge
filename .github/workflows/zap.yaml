@@ -80,8 +80,10 @@ jobs:
           until curl -s http://localhost:${{ env.ZAP_PORT }}; do sleep 5; done
 
       # Create a place holder report file. Replace this with your actual scan output.
-      - name: Create a sample file
+      - name: Create a sample file for security report TXT
         run: echo "This is a test file." > security_report.txt
+
+      - name: Create a sample file for security report JSON
         run: echo "This is a test file." > security_report.json
 
       - name: Set up Python
