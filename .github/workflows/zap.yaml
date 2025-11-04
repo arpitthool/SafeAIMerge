@@ -82,6 +82,7 @@ jobs:
       # Create a place holder report file. Replace this with your actual scan output.
       - name: Create a sample file
         run: echo "This is a test file." > security_report.txt
+        run: echo "This is a test file." > security_report.json
 
       - name: Set up Python
         uses: actions/setup-python@v4
