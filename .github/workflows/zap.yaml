@@ -104,8 +104,6 @@ jobs:
 
       - name: Run ZAP Security Scan on Main Branch
         run: |
-          # Checkout main branch
-          git checkout main
           echo "Running scan on main branch..."
           python3 .security/scan.py
         env:
@@ -135,8 +133,6 @@ jobs:
 
       - name: Run ZAP Security Scan on PR Branch
         run: |
-          # Checkout back to PR branch (or original branch)
-          git checkout ${{ steps.save_branch.outputs.branch_name }}
           echo "Running scan on PR branch..."
           python3 .security/scan.py
         env:
