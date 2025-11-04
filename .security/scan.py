@@ -48,6 +48,21 @@ GITHUB_REPO = os.getenv("GITHUB_REPO")  # Format: "owner/repo"
 # Initialize ZAP API client
 zap = ZAPv2(apikey=ZAP_API_KEY, proxies={'http': f"{ZAP_HOST}:{ZAP_PORT}", 'https': f"{ZAP_HOST}:{ZAP_PORT}"})
 
+# Clear previous alerts and create a new session for this scan
+print('🔄 Clearing previous ZAP session and alerts...')
+try:
+    zap.core.new_session()
+    print('✅ New ZAP session created')
+except Exception as e:
+    print(f'⚠️ Warning: Could not create new session: {e}')
+    # Try to delete all alerts as fallback
+    try:
+        # Delete all alerts
+        zap.core.delete_all_alerts()
+        print('✅ Previous alerts cleared')
+    except Exception as e2:
+        print(f'⚠️ Warning: Could not clear alerts: {e2}')
+
 # Access the target URL first
 print(f'Accessing target {TARGET_URL}')
 zap.urlopen(TARGET_URL)
@@ -106,8 +121,7 @@ else:
     print('🚫 Skipping Active scan as per config.')
 
 # ✅ Sort and save alerts in JSON file
-branch_name = os.getenv("GITHUB_REF_NAME", "") or os.getenv("GITHUB_HEAD_REF", "")
-suffix = "main" if branch_name == "main" else "pr"
+suffix = os.getenv("GITHUB_REF_NAME", "")   # main or pr_branch or empty if not a PR
 json_report_filename = f"security_report_{suffix}.json"
 sorted_alerts = sort_and_save_alerts(zap.core.alerts(), json_report_filename)
 
