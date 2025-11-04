@@ -116,6 +116,12 @@ jobs:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
           REPORT_SUFFIX: main
 
+      - name: Delete web app for Main Branch
+        if: always()
+        run: |
+          docker rm -f my-web-app-main || true
+          echo "Main branch web app deleted"
+
       # - name: Build Docker image for PR Branch
       #   run: |
       #     git checkout ${{ steps.save_branch.outputs.branch_name }}
@@ -145,6 +151,12 @@ jobs:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
           REPORT_SUFFIX: pr
 
+      - name: Delete web app for PR Branch
+        if: always()
+        run: |
+          docker rm -f my-web-app-pr || true
+          echo "PR branch web app deleted"
+
       - name: Upload Security Report
         uses: actions/upload-artifact@v4
         with:
@@ -153,12 +165,6 @@ jobs:
             security_report.txt
             security_report_main.json
             security_report_pr.json
-
-      - name: Terminate web apps
-        if: always()
-        run: |
-          docker rm -f my-web-app-main || true
-          docker rm -f my-web-app-pr || true
 
       - name: Stop ZAP
         if: always()
