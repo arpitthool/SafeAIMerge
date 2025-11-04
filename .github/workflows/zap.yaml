@@ -92,7 +92,7 @@ jobs:
         run: pip install -r .security/requirements.txt
 
       - name: Run ZAP Security Scan
-        run: python3 .security/basic-scan.py
+        run: python3 .security/scan.py
         env:
           ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
           ZAP_PORT: ${{ env.ZAP_PORT }}
@@ -107,7 +107,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: security-report
-          path: security_report.txt
+          path: |
+            security_report.txt
+            security_report.json
 
       - name: Terminate web app
         if: always()

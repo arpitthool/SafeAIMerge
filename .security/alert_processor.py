@@ -3,6 +3,7 @@ import os
 import json
 import yaml
 import sys
+from datetime import datetime
 from dotenv import load_dotenv
 from collections import Counter
 
@@ -171,6 +172,36 @@ def process_alerts(alerts):
         f.write(final_summary)
 
     print("📄 Security report saved as: security_report.txt")
+
+    # Save JSON report for comparison
+    risk_counts = Counter(alert.get("risk", "Unknown").capitalize() for alert in alerts)
+    json_report = {
+        "timestamp": datetime.now().isoformat(),
+        "branch": os.getenv("GITHUB_HEAD_REF") or os.getenv("GITHUB_REF_NAME", "main"),
+        "total_alerts": len(alerts),
+        "risk_breakdown": dict(risk_counts),
+        "alerts": [
+            {
+                "alertRef": item["alert"].get("alertRef"),  # Unique identifier for comparison
+                "pluginId": item["alert"].get("pluginId"),
+                "name": item["alert"].get("name"),
+                "risk": item["alert"].get("risk"),
+                "confidence": item["alert"].get("confidence"),
+                "url": item["alert"].get("url"),
+                "cweid": item["alert"].get("cweid"),
+                "wascid": item["alert"].get("wascid"),
+                "description": item["alert"].get("description"),
+                "solution": item["alert"].get("solution"),
+                "summary": item["summary"]
+            }
+            for item in alert_summaries
+        ]
+    }
+    
+    with open("security_report.json", "w", encoding="utf-8") as f:
+        json.dump(json_report, f, indent=2)
+    
+    print("📄 JSON report saved as: security_report.json")
 
     # 🚨 Fail the pipeline if needed
     if fail_risk_alerts > 0:
