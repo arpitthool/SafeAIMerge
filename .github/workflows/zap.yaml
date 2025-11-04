@@ -16,8 +16,7 @@ jobs:
     runs-on: self-hosted
 
     env:
-      WEB_APP_MAIN_HOST_PORT: 3000
-      WEB_APP_PR_HOST_PORT: 3001
+      WEB_APP_HOST_PORT: 3000
       WEB_APP_CONTAINER_PORT: 3000
       ZAP_PORT: 8090
 
@@ -87,10 +86,10 @@ jobs:
 
       - name: Start web app for Main Branch
         run: |
-          docker run -d --name my-web-app-main --network zapnet -p 127.0.0.1:${{ env.WEB_APP_MAIN_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
-          # docker run -d --name my-web-app-main --network zapnet -p 127.0.0.1:${{ env.WEB_APP_MAIN_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-main:latest
+          docker run -d --name my-web-app-main --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
+          # docker run -d --name my-web-app-main --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-main:latest
           echo "Waiting for main branch web app..."
-          until curl -sSf http://localhost:${{ env.WEB_APP_MAIN_HOST_PORT }}; do sleep 5; done
+          until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
           echo "Main branch web app is ready"
 
       - name: create a sample file for security report JSON (Main)
@@ -125,10 +124,10 @@ jobs:
 
       - name: Start web app for PR Branch
         run: |
-          docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_PR_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
-          # docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_PR_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-pr:latest
+          docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
+          # docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-pr:latest
           echo "Waiting for PR branch web app..."
-          until curl -sSf http://localhost:${{ env.WEB_APP_PR_HOST_PORT }}; do sleep 5; done
+          until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
           echo "PR branch web app is ready"
 
       - name: Run ZAP Security Scan on PR Branch
