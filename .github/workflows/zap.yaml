@@ -115,7 +115,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
-          GITHUB_REF_NAME: main
+          REPORT_SUFFIX: main
 
       # - name: Build Docker image for PR Branch
       #   run: |
@@ -144,7 +144,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
-          GITHUB_REF_NAME: pr
+          REPORT_SUFFIX: pr
 
       - name: Upload Security Report
         uses: actions/upload-artifact@v4

@@ -121,7 +121,7 @@ else:
     print('🚫 Skipping Active scan as per config.')
 
 # ✅ Sort and save alerts in JSON file
-suffix = os.getenv("GITHUB_REF_NAME", "")   # main or pr_branch or empty if not a PR
+suffix = os.getenv("REPORT_SUFFIX", "")   # main or pr or empty if not set
 json_report_filename = f"security_report_{suffix}.json"
 sorted_alerts = sort_and_save_alerts(zap.core.alerts(), json_report_filename)
 print(f"📄 JSON report saved as: {json_report_filename}")
