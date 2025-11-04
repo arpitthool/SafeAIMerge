@@ -92,7 +92,16 @@ jobs:
           echo "Waiting for main branch web app..."
           until curl -sSf http://localhost:${{ env.WEB_APP_MAIN_HOST_PORT }}; do sleep 5; done
           echo "Main branch web app is ready"
-      
+
+      - name: create a sample file for security report JSON (Main)
+        run: echo "This is a test file." > security_report_main.json
+
+      - name: create a sample file for security report JSON (PR)
+        run: echo "This is a test file." > security_report_pr.json
+
+      - name: create a sample file for security report TXT (Main)
+        run: echo "This is a test file." > security_report.txt
+
       - name: Run ZAP Security Scan on Main Branch
         run: |
           # Checkout main branch
