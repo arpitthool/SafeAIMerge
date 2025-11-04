@@ -144,11 +144,7 @@ def process_alerts(alerts):
 
     print(f"✅ Starting to process {len(alerts)} alert(s).")
 
-    sorted_alerts = sort_and_save_alerts(alerts, "security_report.json")
-
-    risk_counts = Counter(alert.get("risk", "Unknown").capitalize() for alert in sorted_alerts)
-
-    for alert in sorted_alerts:
+    for alert in alerts:
         risk_level = alert.get("risk", "").lower()
 
         # Ignore alerts in ignore_levels

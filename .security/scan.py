@@ -10,7 +10,7 @@ from zapv2 import ZAPv2
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
 
-from alert_processor import process_alerts
+from alert_processor import process_alerts, sort_and_save_alerts
 from github import post_pr_comment
 
 # Load environment variables
@@ -105,8 +105,14 @@ if run_active:
 else:
     print('🚫 Skipping Active scan as per config.')
 
+# ✅ Sort and save alerts in JSON file
+branch_name = os.getenv("GITHUB_REF_NAME", "") or os.getenv("GITHUB_HEAD_REF", "")
+suffix = "main" if branch_name == "main" else "pr"
+json_report_filename = f"security_report_{suffix}.json"
+sorted_alerts = sort_and_save_alerts(zap.core.alerts(), json_report_filename)
+
 # ✅ Process and summarize alerts
-final_summary = process_alerts(zap.core.alerts())
+final_summary = process_alerts(sorted_alerts)
 
 # ✅ Post final summary as PR comment
 artifact_link = f"https://github.com/{GITHUB_REPO}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"
