@@ -10,7 +10,7 @@ from zapv2 import ZAPv2
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
 
-from alert_processor import process_alerts
+from alert_processor import process_alerts, sort_and_save_alerts
 from github import post_pr_comment
 
 # Load environment variables
@@ -47,6 +47,21 @@ GITHUB_REPO = os.getenv("GITHUB_REPO")  # Format: "owner/repo"
 
 # Initialize ZAP API client
 zap = ZAPv2(apikey=ZAP_API_KEY, proxies={'http': f"{ZAP_HOST}:{ZAP_PORT}", 'https': f"{ZAP_HOST}:{ZAP_PORT}"})
+
+# Clear previous alerts and create a new session for this scan
+print('🔄 Clearing previous ZAP session and alerts...')
+try:
+    zap.core.new_session()
+    print('✅ New ZAP session created')
+except Exception as e:
+    print(f'⚠️ Warning: Could not create new session: {e}')
+    # Try to delete all alerts as fallback
+    try:
+        # Delete all alerts
+        zap.core.delete_all_alerts()
+        print('✅ Previous alerts cleared')
+    except Exception as e2:
+        print(f'⚠️ Warning: Could not clear alerts: {e2}')
 
 # Access the target URL first
 print(f'Accessing target {TARGET_URL}')
@@ -105,9 +120,15 @@ if run_active:
 else:
     print('🚫 Skipping Active scan as per config.')
 
-# ✅ Process and summarize alerts
-final_summary = process_alerts(zap.core.alerts())
+# ✅ Sort and save alerts in JSON file
+suffix = os.getenv("REPORT_SUFFIX", "")   # main or pr or empty if not set
+json_report_filename = f"security_report_{suffix}.json"
+sorted_alerts = sort_and_save_alerts(zap.core.alerts(), json_report_filename)
+print(f"📄 JSON report saved as: {json_report_filename}")
 
-# ✅ Post final summary as PR comment
-artifact_link = f"https://github.com/{GITHUB_REPO}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"
-post_pr_comment(f"### Security Scan Summary 🚨\n\n```\n{final_summary}\n```\n📂 **[Download Full Report]({artifact_link})**")
+# ✅ Process and summarize alerts
+if suffix == "pr":
+    final_summary = process_alerts(sorted_alerts)
+    # ✅ Post final summary as PR comment
+    artifact_link = f"https://github.com/{GITHUB_REPO}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"
+    post_pr_comment(f"### Security Scan Summary 🚨\n\n```\n{final_summary}\n```\n📂 **[Download Full Report]({artifact_link})**")

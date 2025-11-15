@@ -3,6 +3,7 @@ import os
 import json
 import yaml
 import sys
+from datetime import datetime
 from dotenv import load_dotenv
 from collections import Counter
 
@@ -112,6 +113,28 @@ def generate_final_summary(alert_summaries, all_alerts, summarized_alerts, alert
     )
 
     return stats_intro + response.choices[0].message.content
+
+def sort_alerts_by_risk(alerts):
+    """Sort alerts by risk"""
+    # Define the desired order of risk levels for sorting
+    risk_order = {"high": 0, "medium": 1, "low": 2, "informational": 3}
+
+    # Sort alerts by risk before further processing or saving
+    def alert_risk_key(alert):
+        # Normalize risk string to lowercase and fall back to a large value if missing or unexpected risk
+        return risk_order.get(str(alert.get("risk", "")).lower(), 99)
+
+    sorted_alerts = sorted(alerts, key=alert_risk_key)
+
+    return sorted_alerts
+
+def sort_and_save_alerts(alerts, filename: str):
+    sorted_alerts = sort_alerts_by_risk(alerts)
+
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(sorted_alerts, f, indent=2)
+    print(f"📄 JSON report saved as: {filename}")
+    return sorted_alerts
 
 def process_alerts(alerts):
     """Main entry to filter alerts, selectively summarize, and generate the final report."""

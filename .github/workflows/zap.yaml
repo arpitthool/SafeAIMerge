@@ -53,15 +53,6 @@ jobs:
       - name: Create Docker network
         run: docker network create zapnet
 
-      # - name: Build Docker image
-      #   run: docker build -t my-web-app-image .
-
-      - name: Start web app using docker
-        run: |
-          docker run -d --name my-web-app --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
-          echo "Waiting for Juice Shop..."
-          until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
-
       - name: Start ZAP server
         run: |
           docker pull ghcr.io/zaproxy/zaproxy:stable
@@ -78,10 +69,15 @@ jobs:
         run: |
           echo "Waiting for ZAP..."
           until curl -s http://localhost:${{ env.ZAP_PORT }}; do sleep 5; done
-
-      # Create a place holder report file. Replace this with your actual scan output.
-      - name: Create a sample file
-        run: echo "This is a test file." > security_report.txt
+      
+      - name: Create sample files for security report
+        run: |
+          > security_report_main.json
+          > security_report_pr.json
+          > security_report.txt
+          > new_alerts.json
+          > resolved_alerts.json
+          > common_alerts.json
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -89,29 +85,101 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install -r .security/requirements.txt
+        run: python3 -m pip install -r .security/requirements.txt
 
-      - name: Run ZAP Security Scan
-        run: python3 .security/basic-scan.py
+      # - name: Build Docker image for PR Branch
+      #   run: |
+      #     docker rmi my-web-app-pr:latest || echo "Docker image for PR branch not found"
+      #     docker build -t my-web-app-pr:latest .
+      #     echo "Docker image built for PR branch"
+
+      - name: Start web app for PR Branch
+        run: |
+          docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
+          # docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-pr:latest
+          echo "Waiting for PR branch web app..."
+          until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
+          echo "PR branch web app is ready"
+
+      - name: Run ZAP Security Scan on PR Branch
+        run: |
+          echo "Running scan on PR branch..."
+          python3 .security/scan.py
         env:
           ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
           ZAP_PORT: ${{ env.ZAP_PORT }}
-          TARGET_URL: http://my-web-app:${{ env.WEB_APP_CONTAINER_PORT }}
+          TARGET_URL: http://my-web-app-pr:${{ env.WEB_APP_CONTAINER_PORT }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ZAP_HOST: http://localhost
           GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
+          REPORT_SUFFIX: pr
+
+      - name: Delete web app for PR Branch
+        if: always()
+        run: |
+          docker rm -f my-web-app-pr || echo "Docker container for PR branch not found"
+          docker rmi my-web-app-pr:latest || echo "Docker image for PR branch not found"
+          echo "PR branch web app deleted"
+
+      # - name: Build Docker image for Main Branch
+      #   run: |
+      #     git checkout main
+      #     docker rmi my-web-app-main:latest || echo "Docker image for Main branch not found"
+      #     docker build -t my-web-app-main:latest .
+      #     echo "Docker image built for main branch"
+      #     # switch back to the PR branch
+      #     git checkout ${{ github.head_ref }} || echo "Failed to switch back to PR branch"
+
+      - name: Start web app for Main Branch
+        run: |
+          docker run -d --name my-web-app-main --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
+          # docker run -d --name my-web-app-main --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-main:latest
+          echo "Waiting for main branch web app..."
+          until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
+          echo "Main branch web app is ready"
+
+      - name: Run ZAP Security Scan on Main Branch
+        run: |
+          echo "Running scan on main branch..."
+          python3 .security/scan.py
+        env:
+          ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
+          ZAP_PORT: ${{ env.ZAP_PORT }}
+          TARGET_URL: http://my-web-app-main:${{ env.WEB_APP_CONTAINER_PORT }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ZAP_HOST: http://localhost
+          GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
+          REPORT_SUFFIX: main
+
+      - name: Delete web app for Main Branch
+        if: always()
+        run: |
+          docker rm -f my-web-app-main || echo "Docker container for Main branch not found"
+          docker rmi my-web-app-main:latest || echo "Docker image for Main branch not found"
+          echo "Main branch web app deleted"
+
+      - name: compare the security report of main and pr
+        run: |
+          # print the current branch
+          echo "Current branch: ${{ github.head_ref }}"
+          echo "Comparing the security report of main and pr"
+          python3 .security/alert_diff.py --main security_report_main.json --pr security_report_pr.json
 
       - name: Upload Security Report
         uses: actions/upload-artifact@v4
         with:
           name: security-report
-          path: security_report.txt
-
-      - name: Terminate web app
-        if: always()
-        run: docker rm -f my-web-app
+          path: |
+            security_report.txt
+            security_report_main.json
+            security_report_pr.json
+            new_alerts.json
+            resolved_alerts.json
+            common_alerts.json
 
       - name: Stop ZAP
         if: always()
