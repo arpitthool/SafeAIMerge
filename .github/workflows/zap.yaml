@@ -87,11 +87,11 @@ jobs:
       - name: Install dependencies
         run: python3 -m pip install -r .security/requirements.txt
 
-      - name: Build Docker image for PR Branch
-        run: |
-          docker rmi my-web-app-pr:latest || echo "Docker image for PR branch not found"
-          docker build -t my-web-app-pr:latest .
-          echo "Docker image built for PR branch"
+      # - name: Build Docker image for PR Branch
+      #   run: |
+      #     docker rmi my-web-app-pr:latest || echo "Docker image for PR branch not found"
+      #     docker build -t my-web-app-pr:latest .
+      #     echo "Docker image built for PR branch"
 
       - name: Start web app for PR Branch
         run: |
@@ -119,18 +119,18 @@ jobs:
       - name: Delete web app for PR Branch
         if: always()
         run: |
-          docker rm -f my-web-app-pr || true
-          docker rmi my-web-app-pr:latest || true
+          docker rm -f my-web-app-pr || echo "Docker container for PR branch not found"
+          docker rmi my-web-app-pr:latest || echo "Docker image for PR branch not found"
           echo "PR branch web app deleted"
 
-      - name: Build Docker image for Main Branch
-        run: |
-          git checkout main
-          docker rmi my-web-app-main:latest || true
-          docker build -t my-web-app-main:latest .
-          echo "Docker image built for main branch"
-          # switch back to the PR branch
-          git checkout ${{ github.head_ref }} || echo "Failed to switch back to PR branch"
+      # - name: Build Docker image for Main Branch
+      #   run: |
+      #     git checkout main
+      #     docker rmi my-web-app-main:latest || echo "Docker image for Main branch not found"
+      #     docker build -t my-web-app-main:latest .
+      #     echo "Docker image built for main branch"
+      #     # switch back to the PR branch
+      #     git checkout ${{ github.head_ref }} || echo "Failed to switch back to PR branch"
 
       - name: Start web app for Main Branch
         run: |
@@ -158,8 +158,8 @@ jobs:
       - name: Delete web app for Main Branch
         if: always()
         run: |
-          docker rm -f my-web-app-main || echo "Docker image for Main branch not found"
-          docker rmi my-web-app-main:latest || true
+          docker rm -f my-web-app-main || echo "Docker container for Main branch not found"
+          docker rmi my-web-app-main:latest || echo "Docker image for Main branch not found"
           echo "Main branch web app deleted"
 
       - name: compare the security report of main and pr
