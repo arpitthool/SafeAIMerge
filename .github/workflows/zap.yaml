@@ -69,7 +69,7 @@ jobs:
         run: |
           echo "Waiting for ZAP..."
           until curl -s http://localhost:${{ env.ZAP_PORT }}; do sleep 5; done
-
+      
       - name: Create sample files for security report
         run: |
           > security_report_main.json
@@ -85,11 +85,11 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install -r .security/requirements.txt
+        run: python3 -m pip install -r .security/requirements.txt
 
       - name: Build Docker image for PR Branch
         run: |
-          docker rmi my-web-app-pr:latest || true
+          docker rmi my-web-app-pr:latest || echo "Docker image for PR branch not found"
           docker build -t my-web-app-pr:latest .
           echo "Docker image built for PR branch"
 
@@ -129,6 +129,8 @@ jobs:
           docker rmi my-web-app-main:latest || true
           docker build -t my-web-app-main:latest .
           echo "Docker image built for main branch"
+          # switch back to the PR branch
+          git checkout ${{ github.head_ref }} || echo "Failed to switch back to PR branch"
 
       - name: Start web app for Main Branch
         run: |
@@ -156,14 +158,16 @@ jobs:
       - name: Delete web app for Main Branch
         if: always()
         run: |
-          docker rm -f my-web-app-main || true
+          docker rm -f my-web-app-main || echo "Docker image for Main branch not found"
           docker rmi my-web-app-main:latest || true
           echo "Main branch web app deleted"
 
       - name: compare the security report of main and pr
         run: |
+          # print the current branch
+          echo "Current branch: ${{ github.head_ref }}"
           echo "Comparing the security report of main and pr"
-          python3 ./security/alert_diff.py --main security_report_main.json --pr security_report_pr.json
+          python3 .security/alert_diff.py --main security_report_main.json --pr security_report_pr.json
 
       - name: Upload Security Report
         uses: actions/upload-artifact@v4
