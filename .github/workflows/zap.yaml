@@ -78,11 +78,48 @@ jobs:
       - name: Install dependencies
         run: pip install -r .security/requirements.txt
 
-      # - name: Build Docker image for Main Branch
-      #   run: |
-      #     git checkout main
-      #     docker build -t my-web-app-main:latest .
-      #     echo "Docker image built for main branch"
+      - name: Build Docker image for PR Branch
+        run: |
+          docker rmi my-web-app-pr:latest || true
+          docker build -t my-web-app-pr:latest .
+          echo "Docker image built for PR branch"
+
+      - name: Start web app for PR Branch
+        run: |
+          docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
+          # docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-pr:latest
+          echo "Waiting for PR branch web app..."
+          until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
+          echo "PR branch web app is ready"
+
+      - name: Run ZAP Security Scan on PR Branch
+        run: |
+          echo "Running scan on PR branch..."
+          python3 .security/scan.py
+        env:
+          ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
+          ZAP_PORT: ${{ env.ZAP_PORT }}
+          TARGET_URL: http://my-web-app-pr:${{ env.WEB_APP_CONTAINER_PORT }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ZAP_HOST: http://localhost
+          GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
+          REPORT_SUFFIX: pr
+
+      - name: Delete web app for PR Branch
+        if: always()
+        run: |
+          docker rm -f my-web-app-pr || true
+          docker rmi my-web-app-pr:latest || true
+          echo "PR branch web app deleted"
+
+      - name: Build Docker image for Main Branch
+        run: |
+          git checkout main
+          docker rmi my-web-app-main:latest || true
+          docker build -t my-web-app-main:latest .
+          echo "Docker image built for main branch"
 
       - name: Start web app for Main Branch
         run: |
@@ -120,42 +157,13 @@ jobs:
         if: always()
         run: |
           docker rm -f my-web-app-main || true
+          docker rmi my-web-app-main:latest || true
           echo "Main branch web app deleted"
 
-      # - name: Build Docker image for PR Branch
-      #   run: |
-      #     git checkout ${{ steps.save_branch.outputs.branch_name }}
-      #     docker build -t my-web-app-pr:latest .
-      #     echo "Docker image built for PR branch"
-
-      - name: Start web app for PR Branch
+      - name: compare the security report of main and pr
         run: |
-          docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
-          # docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-pr:latest
-          echo "Waiting for PR branch web app..."
-          until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
-          echo "PR branch web app is ready"
-
-      - name: Run ZAP Security Scan on PR Branch
-        run: |
-          echo "Running scan on PR branch..."
-          python3 .security/scan.py
-        env:
-          ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
-          ZAP_PORT: ${{ env.ZAP_PORT }}
-          TARGET_URL: http://my-web-app-pr:${{ env.WEB_APP_CONTAINER_PORT }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ZAP_HOST: http://localhost
-          GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
-          GITHUB_REPO: ${{ github.repository }}
-          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
-          REPORT_SUFFIX: pr
-
-      - name: Delete web app for PR Branch
-        if: always()
-        run: |
-          docker rm -f my-web-app-pr || true
-          echo "PR branch web app deleted"
+          echo "Comparing the security report of main and pr"
+          python3 ./security/alert_diff.py --main security_report_main.json --pr security_report_pr.json
 
       - name: Upload Security Report
         uses: actions/upload-artifact@v4
@@ -165,6 +173,9 @@ jobs:
             security_report.txt
             security_report_main.json
             security_report_pr.json
+            new_alerts.json
+            resolved_alerts.json
+            common_alerts.json
 
       - name: Stop ZAP
         if: always()
