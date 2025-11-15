@@ -185,7 +185,8 @@ def process_alerts(alerts):
     )
 
     # Save results
-    with open("security_report.txt", "w", encoding="utf-8") as f:
+    filename = "security_report.txt"
+    with open(filename, "w", encoding="utf-8") as f:
         f.write("=== Individual Alert Summaries ===\n")
         for i, item in enumerate(alert_summaries, 1):
             f.write(f"\nAlert {i}:\n{json.dumps(item['alert'], indent=2)}\n")
@@ -193,7 +194,7 @@ def process_alerts(alerts):
         f.write("\n=== Final Security Report ===\n")
         f.write(final_summary)
 
-    print("📄 Security report saved as: security_report.txt")
+    print(f"📄 Security report saved as: {filename}")
 
     # 🚨 Fail the pipeline if needed
     if fail_risk_alerts > 0:
