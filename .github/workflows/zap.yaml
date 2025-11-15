@@ -70,6 +70,15 @@ jobs:
           echo "Waiting for ZAP..."
           until curl -s http://localhost:${{ env.ZAP_PORT }}; do sleep 5; done
 
+      - name: Create sample files for security report
+        run: |
+          > security_report_main.json
+          > security_report_pr.json
+          > security_report.txt
+          > new_alerts.json
+          > resolved_alerts.json
+          > common_alerts.json
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -128,15 +137,6 @@ jobs:
           echo "Waiting for main branch web app..."
           until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
           echo "Main branch web app is ready"
-
-      - name: create a sample file for security report JSON (Main)
-        run: echo "This is a test file." > security_report_main.json
-
-      - name: create a sample file for security report JSON (PR)
-        run: echo "This is a test file." > security_report_pr.json
-
-      - name: create a sample file for security report TXT (Main)
-        run: echo "This is a test file." > security_report.txt
 
       - name: Run ZAP Security Scan on Main Branch
         run: |
