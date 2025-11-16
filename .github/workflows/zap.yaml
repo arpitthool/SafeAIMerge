@@ -121,12 +121,12 @@ jobs:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
           REPORT_SUFFIX: main
 
-      # - name: Delete web app for Main Branch
-      #   if: always()
-      #   run: |
-      #     docker rm -f my-web-app-main || echo "Docker image for Main branch not found"
-      #     docker rmi my-web-app-main:latest || true
-      #     echo "Main branch web app deleted"
+      - name: Delete web app for Main Branch
+        if: always()
+        run: |
+          docker rm -f my-web-app-main || echo "Docker image for Main branch not found"
+          docker rmi my-web-app-main:latest || true
+          echo "Main branch web app deleted"
 
       # - name: Build Docker image for PR Branch
       #   run: |
@@ -158,12 +158,12 @@ jobs:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
           REPORT_SUFFIX: pr
 
-      # - name: Delete web app for PR Branch
-      #   if: always()
-      #   run: |
-      #     docker rm -f my-web-app-pr || true
-      #     docker rmi my-web-app-pr:latest || true
-      #     echo "PR branch web app deleted"
+      - name: Delete web app for PR Branch
+        if: always()
+        run: |
+          docker rm -f my-web-app-pr || true
+          docker rmi my-web-app-pr:latest || true
+          echo "PR branch web app deleted"
 
       - name: Upload Security Report
         uses: actions/upload-artifact@v4
