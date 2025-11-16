@@ -1,22 +1,6 @@
 #!/usr/bin/env python3
-"""
-ZAP JSON Diff (Main vs PR) - JSON Output Only
 
-Compares two ZAP reports (main vs PR) and outputs:
-    - new_alerts.json
-    - resolved_alerts.json
-    - common_alerts.json
 
-Normalization:
-- Ignores differences in hostname, querystring, trailing slashes
-- Drops noisy fields like confidence, evidence, IDs
-- Compares by (pluginId, alert, risk, cweid, normalized path, param)
-
-Usage:
-    python zap_diff_json.py --main security_report_main.json --pr security_report_pr.json
-"""
-
-import argparse
 import json
 from urllib.parse import urlparse
 from pathlib import Path
@@ -28,8 +12,27 @@ from pathlib import Path
 
 def read_json(path: Path):
     """Read and parse JSON safely."""
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    if not path.exists():
+        print(f"[WARN] File does not exist: {path}")
+        return []
+    
+    if path.stat().st_size == 0:
+        print(f"[WARN] File is empty: {path}")
+        return []
+    
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:
+                print(f"[WARN] File contains only whitespace: {path}")
+                return []
+            return json.loads(content)
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] Invalid JSON in {path}: {e}")
+        return []
+    except Exception as e:
+        print(f"[ERROR] Error reading {path}: {e}")
+        return []
 
 
 def iter_alert_objects(data):
@@ -83,6 +86,10 @@ def alert_signature(a):
 def normalize_alerts(path: Path):
     """Return (set of signatures, map of signature→alert) for a given ZAP file."""
     data = read_json(path)
+    if not data:
+        print(f"[INFO] No alerts found in {path}, returning empty set and map")
+        return set(), {}
+    
     alerts = list(iter_alert_objects(data))
     norm_set = set()
     norm_map = {}
@@ -92,22 +99,28 @@ def normalize_alerts(path: Path):
         norm_map[sig] = a
     return norm_set, norm_map
 
+def alert_diff (main_report_filename: str = "security_report_main.json", pr_report_filename: str = "security_report_pr.json"):
+    """
+    ZAP JSON Diff (Main vs PR) - JSON Output Only
 
-# ------------------------------------------------------------
-# Main Comparison Logic
-# ------------------------------------------------------------
+    Compares two ZAP reports (main vs PR) and outputs:
+        - new_alerts.json
+        - resolved_alerts.json
+        - common_alerts.json
 
-def main():
-    parser = argparse.ArgumentParser(description="Compare two ZAP JSON reports and output new/resolved/common alerts.")
-    parser.add_argument("--main", required=True, type=Path, help="Path to main branch ZAP JSON")
-    parser.add_argument("--pr", required=True, type=Path, help="Path to PR branch ZAP JSON")
-    args = parser.parse_args()
+    Normalization:
+    - Ignores differences in hostname, querystring, trailing slashes
+    - Drops noisy fields like confidence, evidence, IDs
+    - Compares by (pluginId, alert, risk, cweid, normalized path, param)
 
-    print(f"[INFO] Loading main report: {args.main}")
-    main_set, main_map = normalize_alerts(args.main)
+    Usage:
+        python zap_diff_json.py --main security_report_main.json --pr security_report_pr.json
+    """
+    print(f"[INFO] Loading main report: {main_report_filename}")
+    main_set, main_map = normalize_alerts(Path(main_report_filename))
 
-    print(f"[INFO] Loading PR report: {args.pr}")
-    pr_set, pr_map = normalize_alerts(args.pr)
+    print(f"[INFO] Loading PR report: {pr_report_filename}")
+    pr_set, pr_map = normalize_alerts(Path(pr_report_filename))
 
     new_signatures = pr_set - main_set
     resolved_signatures = main_set - pr_set
@@ -141,7 +154,3 @@ def main():
         print("\nTop NEW alerts (up to 10):")
         for i, alert in enumerate(new_alerts[:10]):
             print(f"- [{alert.get('risk')}] {alert.get('alert')} @ {normalize_url(alert.get('url',''))}")
-
-
-if __name__ == "__main__":
-    main()
