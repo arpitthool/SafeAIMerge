@@ -32,7 +32,6 @@ jobs:
         with:
           token: ${{ secrets.GH_BOT_TOKEN }}
           target: 'http://localhost:3000'
-          rules_file_name: '.github/workflows/rules.tsv'
         
       - name: Delete web app
         run: |
