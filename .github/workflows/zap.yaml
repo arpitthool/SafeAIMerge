@@ -31,7 +31,7 @@ jobs:
         uses: zaproxy/action-baseline@master
         with:
           token: ${{ secrets.GH_BOT_TOKEN }}
-          target: 'https://www.zaproxy.org/'
+          target: 'http://localhost:3000'
           rules_file_name: '.github/workflows/rules.tsv'
         
       - name: Delete web app
