@@ -22,7 +22,7 @@ jobs:
 
       - name: run owasp juice shop on port 3000
         run: |
-          docker run -d -p 127.0.0.1:3000:3000 bkimminich/juice-shop
+          docker run -d --name my-web-app-main -p 127.0.0.1:3000:3000 bkimminich/juice-shop
           echo "Waiting for main branch web app..."
           until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
           echo "Main branch web app is ready"
