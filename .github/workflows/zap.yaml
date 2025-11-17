@@ -171,8 +171,8 @@ jobs:
           name: security-report
           path: |
             security_report.txt
+            security_report_pr.json
             # security_report_main.json
-            # security_report_pr.json
             # new_alerts.json
             # resolved_alerts.json
             # common_alerts.json

@@ -96,11 +96,11 @@ def generate_final_summary(
 
     # Contextual summary
     stats_intro = (
-        f"Security scan detected **{total_alerts}** total alerts.\n\n" +
-        f"📊 **Risk Level Breakdown:**\n" +
+        f"Total alerts detected: {total_alerts}.\n\n" +
+        f"📊 Risk Level Breakdown:\n" +
         "".join(f"- {level}: {count}\n" for level, count in risk_counts.items()) + "\n" +
-        f"✅ **Alerts summarized in this report**: {', '.join(summarized_levels) or 'None'}.\n" +
-        f"🔒 Total number of alerts in the report: {alerts_count}.\n\n"
+        f"✅ Alerts summarized in this report: {', '.join(summarized_levels) or 'None'}.\n" +
+        f"🔒 Total number of alerts in this report: {alerts_count}.\n\n"
     )
 
     summaries_text = "\n\n".join(item["summary"] for item in alert_summaries)
