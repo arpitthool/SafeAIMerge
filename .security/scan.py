@@ -197,6 +197,51 @@ if suffix == "pr":
     
     print(f"📄 Security report saved as: security_report.txt")
 
-    # ✅ Post final summary as PR comment
+    # ✅ Post interactive summary as PR comment with collapsible sections
     artifact_link = f"https://github.com/{GITHUB_REPO}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"
-    post_pr_comment(f"### Security Scan Summary 🚨\n\n```\n{combined_final_summary}\n```\n📂 **[Download Full Report]({artifact_link})**")
+    
+    # Build interactive comment with collapsible sections
+    comment_body = "### 🔒 Security Scan Summary 🚨\n\n"
+    
+    # Add quick stats at the top
+    total_new = new_alerts_count
+    total_resolved = resolved_alerts_count
+    total_common = len(common_alerts_data)
+    
+    comment_body += f"**Quick Stats:** "
+    stats_parts = []
+    if total_new > 0:
+        stats_parts.append(f"🆕 {total_new} new")
+    if total_resolved > 0:
+        stats_parts.append(f"✅ {total_resolved} resolved")
+    if total_common > 0:
+        stats_parts.append(f"⚙️ {total_common} existing")
+    comment_body += " | ".join(stats_parts) if stats_parts else "No alerts"
+    comment_body += "\n\n---\n\n"
+    
+    # If no alerts at all, show a success message
+    if not stats_parts:
+        comment_body += "✅ **No security alerts found!** Great job keeping the codebase secure.\n\n"
+    
+    # New Alerts Section (collapsible)
+    if new_alerts_count > 0:
+        comment_body += "<details>\n<summary><b>🆕 New Alerts Summary</b> (" + str(new_alerts_count) + " alert" + ("s" if new_alerts_count > 1 else "") + ")</summary>\n\n"
+        comment_body += "```\n" + new_final_summary + "\n```\n\n"
+        comment_body += "</details>\n\n"
+    
+    # Resolved Alerts Section (collapsible)
+    if resolved_alerts_count > 0:
+        comment_body += "<details>\n<summary><b>✅ Resolved Alerts Summary</b> (" + str(resolved_alerts_count) + " alert" + ("s" if resolved_alerts_count > 1 else "") + ")</summary>\n\n"
+        comment_body += "```\n" + resolved_final_summary + "\n```\n\n"
+        comment_body += "</details>\n\n"
+    
+    # Older/Common Alerts Section (collapsible)
+    if len(common_alerts_data) > 0:
+        comment_body += "<details>\n<summary><b>⚙️ Existing Alerts Summary</b> (" + str(len(common_alerts_data)) + " alert" + ("s" if len(common_alerts_data) > 1 else "") + ")</summary>\n\n"
+        comment_body += "```\n" + common_final_summary + "\n```\n\n"
+        comment_body += "</details>\n\n"
+    
+    # Add download link at the bottom
+    comment_body += f"---\n\n📂 **[Download Full Report]({artifact_link})**"
+    
+    post_pr_comment(comment_body)
