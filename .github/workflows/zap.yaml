@@ -32,19 +32,6 @@ jobs:
         with:
           token: ${{ secrets.GH_BOT_TOKEN }}
           target: 'http://localhost:3000'
-
-      - name: Post ZAP Scan Results to PR
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_BOT_TOKEN }}
-          script: |
-            const zapResults = "ZAP Scan completed with X alerts. [Link to full report]"; // Customize this message
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: zapResults
-            });
         
       - name: Delete web app
         run: |
