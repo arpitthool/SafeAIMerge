@@ -38,175 +38,175 @@ jobs:
           docker rm -f my-web-app-main || echo "Docker image for Main branch not found"
           docker rmi my-web-app-main:latest || true
           echo "Main branch web app deleted"
-  zap_scan:
-    runs-on: self-hosted2
+  # zap_scan:
+  #   runs-on: self-hosted2
 
-    env:
-      WEB_APP_HOST_PORT: 3000
-      WEB_APP_CONTAINER_PORT: 3000
-      ZAP_PORT: 8090
+  #   env:
+  #     WEB_APP_HOST_PORT: 3000
+  #     WEB_APP_CONTAINER_PORT: 3000
+  #     ZAP_PORT: 8090
 
-    steps:
+  #   steps:
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch full history to compare branches
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0  # Fetch full history to compare branches
 
-      - name: Store PR code changes in file
-        if: github.event_name == 'pull_request'
-        run: |
-          # Fetch all refs to ensure we have both branches
-          git fetch --all --depth=0 || true
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+  #     - name: Store PR code changes in file
+  #       if: github.event_name == 'pull_request'
+  #       run: |
+  #         # Fetch all refs to ensure we have both branches
+  #         git fetch --all --depth=0 || true
+  #         BASE_SHA="${{ github.event.pull_request.base.sha }}"
+  #         HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           
-          {
-            echo "=== PR #${{ github.event.pull_request.number }} Changes ==="
-            echo ""
-            echo "Base branch: ${{ github.base_ref }}"
-            echo "PR branch: ${{ github.head_ref }}"
-            echo ""
-            echo "Changed files:"
-            git diff --name-status $BASE_SHA..$HEAD_SHA || echo "No changes found"
-            echo ""
-            echo "--- Full diff ---"
-            git diff $BASE_SHA..$HEAD_SHA || echo "No diff available"
-          } > pr_changes.txt
-          echo "PR changes written to pr_changes.txt"
-          cat pr_changes.txt
+  #         {
+  #           echo "=== PR #${{ github.event.pull_request.number }} Changes ==="
+  #           echo ""
+  #           echo "Base branch: ${{ github.base_ref }}"
+  #           echo "PR branch: ${{ github.head_ref }}"
+  #           echo ""
+  #           echo "Changed files:"
+  #           git diff --name-status $BASE_SHA..$HEAD_SHA || echo "No changes found"
+  #           echo ""
+  #           echo "--- Full diff ---"
+  #           git diff $BASE_SHA..$HEAD_SHA || echo "No diff available"
+  #         } > pr_changes.txt
+  #         echo "PR changes written to pr_changes.txt"
+  #         cat pr_changes.txt
 
-      - name: Create Docker network
-        run: docker network create zapnet
+  #     - name: Create Docker network
+  #       run: docker network create zapnet
 
-      - name: Start ZAP server
-        run: |
-          docker pull ghcr.io/zaproxy/zaproxy:stable
-          docker pull zaproxy/zap-stable
-          docker run -d --name zap --network zapnet \
-            -p ${{ env.ZAP_PORT }}:${{ env.ZAP_PORT }} \
-            zaproxy/zap-stable \
-            zap.sh -daemon -port ${{ env.ZAP_PORT }} -host 0.0.0.0 \
-              -config api.addrs.addr.name=.* \
-              -config api.addrs.addr.regex=true \
-              -config api.key=${{ secrets.ZAP_API_KEY }}
+  #     - name: Start ZAP server
+  #       run: |
+  #         docker pull ghcr.io/zaproxy/zaproxy:stable
+  #         docker pull zaproxy/zap-stable
+  #         docker run -d --name zap --network zapnet \
+  #           -p ${{ env.ZAP_PORT }}:${{ env.ZAP_PORT }} \
+  #           zaproxy/zap-stable \
+  #           zap.sh -daemon -port ${{ env.ZAP_PORT }} -host 0.0.0.0 \
+  #             -config api.addrs.addr.name=.* \
+  #             -config api.addrs.addr.regex=true \
+  #             -config api.key=${{ secrets.ZAP_API_KEY }}
 
-      - name: Wait for ZAP to start
-        run: |
-          echo "Waiting for ZAP..."
-          until curl -s http://localhost:${{ env.ZAP_PORT }}; do sleep 5; done
+  #     - name: Wait for ZAP to start
+  #       run: |
+  #         echo "Waiting for ZAP..."
+  #         until curl -s http://localhost:${{ env.ZAP_PORT }}; do sleep 5; done
       
-      - name: Create sample files for security report
-        run: |
-          > security_report_main.json
-          > security_report_pr.json
-          > security_report.txt
-          > new_alerts.json
-          > resolved_alerts.json
-          > common_alerts.json
+  #     - name: Create sample files for security report
+  #       run: |
+  #         > security_report_main.json
+  #         > security_report_pr.json
+  #         > security_report.txt
+  #         > new_alerts.json
+  #         > resolved_alerts.json
+  #         > common_alerts.json
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.10'
 
-      - name: Install dependencies
-        run: python3 -m pip install -r .security/requirements.txt
+  #     - name: Install dependencies
+  #       run: python3 -m pip install -r .security/requirements.txt
 
 
-      # - name: Build Docker image for Main Branch
-      #   run: |
-      #     git checkout main
-      #     docker rmi my-web-app-main:latest || true
-      #     docker build -t my-web-app-main:latest .
-      #     echo "Docker image built for main branch"
-      #     # switch back to the PR branch
-      #     git checkout ${{ github.head_ref }} || echo "Failed to switch back to PR branch"
+  #     # - name: Build Docker image for Main Branch
+  #     #   run: |
+  #     #     git checkout main
+  #     #     docker rmi my-web-app-main:latest || true
+  #     #     docker build -t my-web-app-main:latest .
+  #     #     echo "Docker image built for main branch"
+  #     #     # switch back to the PR branch
+  #     #     git checkout ${{ github.head_ref }} || echo "Failed to switch back to PR branch"
 
-      - name: Start web app for Main Branch
-        run: |
-          docker run -d --name my-web-app-main --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
-          # docker run -d --name my-web-app-main --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-main:latest
-          echo "Waiting for main branch web app..."
-          until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
-          echo "Main branch web app is ready"
+  #     - name: Start web app for Main Branch
+  #       run: |
+  #         docker run -d --name my-web-app-main --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
+  #         # docker run -d --name my-web-app-main --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-main:latest
+  #         echo "Waiting for main branch web app..."
+  #         until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
+  #         echo "Main branch web app is ready"
 
-      # Notes : Main scan should be done first
-      - name: Run ZAP Security Scan on Main Branch
-        run: |
-          echo "Running scan on main branch..."
-          python3 .security/scan.py
-        env:
-          ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
-          ZAP_PORT: ${{ env.ZAP_PORT }}
-          TARGET_URL: http://my-web-app-main:${{ env.WEB_APP_CONTAINER_PORT }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ZAP_HOST: http://localhost
-          GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
-          GITHUB_REPO: ${{ github.repository }}
-          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
-          REPORT_SUFFIX: main
+  #     # Notes : Main scan should be done first
+  #     - name: Run ZAP Security Scan on Main Branch
+  #       run: |
+  #         echo "Running scan on main branch..."
+  #         python3 .security/scan.py
+  #       env:
+  #         ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
+  #         ZAP_PORT: ${{ env.ZAP_PORT }}
+  #         TARGET_URL: http://my-web-app-main:${{ env.WEB_APP_CONTAINER_PORT }}
+  #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  #         ZAP_HOST: http://localhost
+  #         GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
+  #         GITHUB_REPO: ${{ github.repository }}
+  #         GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
+  #         REPORT_SUFFIX: main
 
-      - name: Delete web app for Main Branch
-        if: always()
-        run: |
-          docker rm -f my-web-app-main || echo "Docker image for Main branch not found"
-          docker rmi my-web-app-main:latest || true
-          echo "Main branch web app deleted"
+  #     - name: Delete web app for Main Branch
+  #       if: always()
+  #       run: |
+  #         docker rm -f my-web-app-main || echo "Docker image for Main branch not found"
+  #         docker rmi my-web-app-main:latest || true
+  #         echo "Main branch web app deleted"
 
-      # - name: Build Docker image for PR Branch
-      #   run: |
-      #     docker rmi my-web-app-pr:latest || echo "Docker image for PR branch not found"
-      #     docker build -t my-web-app-pr:latest .
-      #     echo "Docker image built for PR branch"
+  #     # - name: Build Docker image for PR Branch
+  #     #   run: |
+  #     #     docker rmi my-web-app-pr:latest || echo "Docker image for PR branch not found"
+  #     #     docker build -t my-web-app-pr:latest .
+  #     #     echo "Docker image built for PR branch"
 
-      - name: Start web app for PR Branch
-        run: |
-          docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
-          # docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-pr:latest
-          echo "Waiting for PR branch web app..."
-          until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
-          echo "PR branch web app is ready"
+  #     - name: Start web app for PR Branch
+  #       run: |
+  #         docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} bkimminich/juice-shop
+  #         # docker run -d --name my-web-app-pr --network zapnet -p 127.0.0.1:${{ env.WEB_APP_HOST_PORT }}:${{ env.WEB_APP_CONTAINER_PORT }} my-web-app-pr:latest
+  #         echo "Waiting for PR branch web app..."
+  #         until curl -sSf http://localhost:${{ env.WEB_APP_HOST_PORT }}; do sleep 5; done
+  #         echo "PR branch web app is ready"
 
-      # Note : PR scan should be done after the main scan is done
-      - name: Run ZAP Security Scan on PR Branch and create security report
-        run: |
-          echo "Running scan on PR branch..."
-          python3 .security/scan.py
-        env:
-          ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
-          ZAP_PORT: ${{ env.ZAP_PORT }}
-          TARGET_URL: http://my-web-app-pr:${{ env.WEB_APP_CONTAINER_PORT }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ZAP_HOST: http://localhost
-          GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
-          GITHUB_REPO: ${{ github.repository }}
-          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
-          REPORT_SUFFIX: pr
+  #     # Note : PR scan should be done after the main scan is done
+  #     - name: Run ZAP Security Scan on PR Branch and create security report
+  #       run: |
+  #         echo "Running scan on PR branch..."
+  #         python3 .security/scan.py
+  #       env:
+  #         ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
+  #         ZAP_PORT: ${{ env.ZAP_PORT }}
+  #         TARGET_URL: http://my-web-app-pr:${{ env.WEB_APP_CONTAINER_PORT }}
+  #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  #         ZAP_HOST: http://localhost
+  #         GITHUB_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
+  #         GITHUB_REPO: ${{ github.repository }}
+  #         GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}  # If PR exists
+  #         REPORT_SUFFIX: pr
 
-      - name: Delete web app for PR Branch
-        if: always()
-        run: |
-          docker rm -f my-web-app-pr || true
-          docker rmi my-web-app-pr:latest || true
-          echo "PR branch web app deleted"
+  #     - name: Delete web app for PR Branch
+  #       if: always()
+  #       run: |
+  #         docker rm -f my-web-app-pr || true
+  #         docker rmi my-web-app-pr:latest || true
+  #         echo "PR branch web app deleted"
 
-      - name: Upload Security Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-report
-          path: |
-            security_report.txt
-            security_report_pr.json
-            # security_report_main.json
-            # new_alerts.json
-            # resolved_alerts.json
-            # common_alerts.json
+  #     - name: Upload Security Report
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: security-report
+  #         path: |
+  #           security_report.txt
+  #           security_report_pr.json
+  #           # security_report_main.json
+  #           # new_alerts.json
+  #           # resolved_alerts.json
+  #           # common_alerts.json
 
-      - name: Stop ZAP
-        if: always()
-        run: docker rm -f zap
+  #     - name: Stop ZAP
+  #       if: always()
+  #       run: docker rm -f zap
 
-      - name: Remove Docker network
-        if: always()
-        run: docker network rm zapnet
+  #     - name: Remove Docker network
+  #       if: always()
+  #       run: docker network rm zapnet
