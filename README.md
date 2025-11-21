@@ -25,6 +25,7 @@ All of this is packaged into a **configurable, developer-friendly GitHub Action*
 - ✅ Auto-summarizes alerts with GPT for human-readable feedback
 - ✅ Context-aware suggestions: LLM analyzes PR code changes to provide targeted security fix recommendations
 - ✅ Adds comments directly on PRs
+- ✅ Generates visually appealing HTML reports with categorized alerts (new, resolved, common)
 - ✅ Pipeline gating: fail PRs with critical risks
 - ✅ Customizable via `.security/config.yaml`
 
@@ -39,7 +40,7 @@ All of this is packaged into a **configurable, developer-friendly GitHub Action*
     E --> F[ZAP Generates Alerts];
     F --> G[Python summarizes alerts using GPT with PR context];
     G --> H[Posts Summary as PR Comment];
-    G --> I[Creates security_report.txt];
+    G --> I[Creates security_report.html];
     I --> J[Uploads as GitHub Artifact];
     G --> K[Optional: Fails pipeline on high-risk alert];
 
@@ -51,12 +52,16 @@ The project is organized to be easily copied into your existing web app reposito
 your-web-app/
 ├── .security/                          # Security scanning module (copy this entire directory)
 │   ├── __init__.py                     # Makes .security/ a Python package
-│   ├── basic-scan.py                   # Main scanning script (runs ZAP scans)
+│   ├── scan.py                         # Main scanning script (runs ZAP scans)
 │   ├── alert_processor.py              # Processes and summarizes alerts using GPT
+│   ├── alert_diff.py                   # Compares alerts between main and PR branches
 │   ├── github.py                       # Handles GitHub API interactions (PR comments)
 │   ├── config.yaml                     # Configuration file (scan settings, risk levels)
-│   ├── prompt_alert.txt                # GPT prompt template for individual alerts
-│   ├── prompt_final.txt                # GPT prompt template for final summary
+│   ├── prompts/                        # GPT prompt templates directory
+│   │   ├── prompt_alert.txt            # GPT prompt template for individual alerts
+│   │   ├── prompt_final.txt            # GPT prompt template for final summary
+│   │   ├── prompt_solved_alert.txt     # GPT prompt template for resolved alerts
+│   │   └── prompt_solved_final.txt     # GPT prompt template for resolved alerts summary
 │   └── requirements.txt                # Python dependencies
 ├── .github/
 │   └── workflows/
@@ -69,18 +74,21 @@ your-web-app/
 
 **`.security/` directory:**
 - **`__init__.py`**: Makes `.security/` a Python package, enabling clean imports
-- **`basic-scan.py`**: Main entry point that orchestrates ZAP scans (spider, AJAX spider, passive, active scans) and processes results
+- **`scan.py`**: Main entry point that orchestrates ZAP scans (spider, AJAX spider, passive, active scans) and processes results
 - **`alert_processor.py`**: Core logic for filtering alerts, calling GPT API for summarization, and generating the security report
+- **`alert_diff.py`**: Compares security alerts between main and PR branches to identify new, resolved, and common alerts
 - **`github.py`**: Utilities for posting PR comments via GitHub API
 - **`config.yaml`**: User-configurable settings for scan types, risk level filtering, and pipeline gating
-- **`prompt_alert.txt`**: Customizable prompt template for GPT to summarize individual security alerts
-- **`prompt_final.txt`**: Customizable prompt template for GPT to generate high-level security summary
+- **`prompts/prompt_alert.txt`**: Customizable prompt template for GPT to summarize individual security alerts
+- **`prompts/prompt_final.txt`**: Customizable prompt template for GPT to generate high-level security summary
+- **`prompts/prompt_solved_alert.txt`**: Customizable prompt template for GPT to summarize resolved alerts
+- **`prompts/prompt_solved_final.txt`**: Customizable prompt template for GPT to generate summary for resolved alerts
 - **`requirements.txt`**: Python package dependencies (openai, dotenv, zaproxy, pyyaml)
 
 **`.github/workflows/zap.yaml`**: GitHub Actions workflow that runs the security scan on PRs, schedules, or manual triggers
 
 **Generated files** (not in repo):
-- **`security_report.txt`**: Generated during each scan run, contains detailed alert summaries and final report (uploaded as artifact)
+- **`security_report.html`**: Generated during each scan run, contains detailed alert summaries and final report in HTML format (uploaded as artifact)
 - **`pr_changes.txt`**: Automatically created by the workflow for PR events, contains the code diff for context-aware security suggestions
 
 ### Copying to Your Project
@@ -162,20 +170,27 @@ Your scan runs automatically on:
 
 - `pull_request` to `main`
 - Manual trigger via "Run workflow"
-- Scheduled cron job (every 5 mins by default)
+- Scheduled cron job (weekly on Sunday at 2 AM EST by default)
 
 ---
 
 ## 📄 Output
 
-- 📝 `security_report.txt` uploaded as a GitHub artifact  
+- 📝 `security_report.html` uploaded as a GitHub artifact (visually appealing HTML report with categorized alerts)  
 - 🧠 LLM-generated summary posted as a **comment** on the PR  
 - 🎯 Context-aware suggestions: For PR events, the LLM analyzes your code changes and provides targeted security fix recommendations
 - ❌ Optional CI failure if critical risk alerts are found
 
-🧪 Example Report Snippet
+🧪 Example Report Content
 
-```yaml
+The HTML report includes categorized sections for:
+- **New Alerts**: Security issues introduced in the PR
+- **Resolved Alerts**: Security issues fixed in the PR
+- **Common Alerts**: Existing security issues present in both branches
+
+Each section contains detailed alert information with LLM-generated summaries. Example content structure:
+
+```
 Security scan detected 9 total alerts.
 
 📊 Risk Level Breakdown:
