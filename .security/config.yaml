@@ -5,7 +5,7 @@ summarize_levels:
   - Medium
 
 # Configurable limit on maximum number of alerts to include in each individual report i.e. new alerts, resolved alerts, and older alerts.
-alerts_limit: 5
+alerts_limit: 15
 
 # It defines which risk levels you want to completely skip i.e. the alerts at these levels won't even be processed. 
 ignore_levels:
