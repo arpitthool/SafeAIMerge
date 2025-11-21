@@ -4,6 +4,9 @@ import os
 import sys
 import yaml
 import json
+import re
+import html
+from datetime import datetime
 from dotenv import load_dotenv
 from zapv2 import ZAPv2
 
@@ -11,7 +14,7 @@ from zapv2 import ZAPv2
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
 
-from alert_processor import process_alerts_file, sort_and_save_alerts, count_alerts, get_alert_summaries_and_final_summary, load_alerts
+from alert_processor import sort_and_save_alerts, count_alerts, get_alert_summaries_and_final_summary, load_alerts
 from github import post_pr_comment
 from alert_diff import alert_diff
 # Load environment variables
@@ -38,6 +41,398 @@ print(f"Selected scans: 🕷️ Spider: {run_spider} | ⚡ AJAX Spider: {run_aja
 # Basic validation: at least one scan must be selected
 if not (run_spider or run_ajax_spider or run_passive or run_active):
     raise ValueError("❌ No scans selected! Please enable at least one scan type in .security/config.yaml.")
+
+
+def format_risk_badge(risk):
+    """Format risk level as a colored badge."""
+    risk_lower = risk.lower() if risk else "unknown"
+    colors = {
+        "high": "#dc3545",
+        "medium": "#ffc107",
+        "low": "#28a745",
+        "informational": "#17a2b8"
+    }
+    color = colors.get(risk_lower, "#6c757d")
+    return f'<span style="background-color: {color}; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">{risk.upper() if risk else "UNKNOWN"}</span>'
+
+def format_summary_text(text):
+    """Convert markdown-like text to HTML with proper escaping."""
+    if not text:
+        return ""
+    # Escape HTML first
+    text = html.escape(text)
+    # Convert markdown headers
+    text = re.sub(r'^### (.*)$', r'<h3>\1</h3>', text, flags=re.MULTILINE)
+    text = re.sub(r'^## (.*)$', r'<h2>\1</h2>', text, flags=re.MULTILINE)
+    text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
+    # Convert line breaks
+    text = text.replace('\n', '<br>')
+    return text
+
+def generate_html_report(new_alerts_with_summaries, resolved_alerts_with_summaries, common_alerts_with_summaries,
+                         new_summaries, resolved_summaries, common_summaries,
+                         new_final_summary, resolved_final_summary, common_final_summary,
+                         new_count, resolved_count, common_count):
+    """Generate a visually appealing HTML security report."""
+    
+    # Use the alert data directly (summaries are already in the alert objects)
+    new_alerts_parsed = new_alerts_with_summaries if new_alerts_with_summaries else []
+    resolved_alerts_parsed = resolved_alerts_with_summaries if resolved_alerts_with_summaries else []
+    common_alerts_parsed = common_alerts_with_summaries if common_alerts_with_summaries else []
+    
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Scan Report</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }}
+        .container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }}
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }}
+        .header h1 {{
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }}
+        .header .timestamp {{
+            opacity: 0.9;
+            font-size: 0.9em;
+        }}
+        .stats {{
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+            flex-wrap: wrap;
+        }}
+        .stat-card {{
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            min-width: 150px;
+        }}
+        .stat-card.new {{
+            border-left: 4px solid #dc3545;
+        }}
+        .stat-card.resolved {{
+            border-left: 4px solid #28a745;
+        }}
+        .stat-card.common {{
+            border-left: 4px solid #ffc107;
+        }}
+        .stat-number {{
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }}
+        .stat-label {{
+            color: #666;
+            font-size: 0.9em;
+        }}
+        .section {{
+            margin: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }}
+        .section.new {{
+            border-left-color: #dc3545;
+        }}
+        .section.resolved {{
+            border-left-color: #28a745;
+        }}
+        .section.common {{
+            border-left-color: #ffc107;
+        }}
+        .section h2 {{
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
+        .alert-card {{
+            background: white;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }}
+        .alert-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }}
+        .alert-title {{
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }}
+        .alert-details {{
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+        }}
+        .alert-details pre {{
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }}
+        .alert-summary {{
+            margin-top: 15px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }}
+        .summary-section {{
+            margin: 30px;
+            padding: 25px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+        .summary-section h2 {{
+            margin-bottom: 15px;
+            color: #667eea;
+        }}
+        .summary-content {{
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }}
+        .empty-state {{
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }}
+        .collapsible {{
+            cursor: pointer;
+            user-select: none;
+        }}
+        .collapsible:hover {{
+            opacity: 0.8;
+        }}
+        .collapsible-content {{
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }}
+        .collapsible-content.expanded {{
+            max-height: 5000px;
+        }}
+        @media (max-width: 768px) {{
+            .stats {{
+                flex-direction: column;
+            }}
+            .stat-card {{
+                width: 100%;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 Security Scan Report</h1>
+            <div class="timestamp">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card new">
+                <div class="stat-number">{new_count}</div>
+                <div class="stat-label">🆕 New Alerts</div>
+            </div>
+            <div class="stat-card resolved">
+                <div class="stat-number">{resolved_count}</div>
+                <div class="stat-label">✅ Resolved Alerts</div>
+            </div>
+            <div class="stat-card common">
+                <div class="stat-number">{common_count}</div>
+                <div class="stat-label">⚙️ Existing Alerts</div>
+            </div>
+        </div>
+"""
+    
+    # New Alerts Section
+    html_content += f"""
+        <div class="section new">
+            <h2>🆕 New Alerts ({new_count})</h2>
+"""
+    if new_alerts_parsed:
+        for i, alert in enumerate(new_alerts_parsed, 1):
+            risk = alert.get('risk', 'Unknown')
+            name = html.escape(str(alert.get('name', 'Unknown Alert')))
+            summary = alert.get('summary', 'No summary available.')
+            alert_json = html.escape(json.dumps(alert, indent=2))
+            
+            html_content += f"""
+            <div class="alert-card">
+                <div class="alert-header">
+                    <div class="alert-title">Alert {i}: {name}</div>
+                    {format_risk_badge(risk)}
+                </div>
+                <details>
+                    <summary class="collapsible" style="cursor: pointer; color: #667eea; margin: 10px 0;">📋 View Alert Details</summary>
+                    <div class="alert-details"><pre>{alert_json}</pre></div>
+                </details>
+                <div class="alert-summary">
+                    <strong>Summary:</strong><br>
+                    <div style="margin-top: 10px;">{format_summary_text(summary)}</div>
+                </div>
+            </div>
+"""
+    else:
+        html_content += '<div class="empty-state">No new alerts.</div>'
+    
+    html_content += """
+        </div>
+"""
+    
+    # Resolved Alerts Section
+    html_content += f"""
+        <div class="section resolved">
+            <h2>✅ Resolved Alerts ({resolved_count})</h2>
+"""
+    if resolved_alerts_parsed:
+        for i, alert in enumerate(resolved_alerts_parsed, 1):
+            risk = alert.get('risk', 'Unknown')
+            name = html.escape(str(alert.get('name', 'Unknown Alert')))
+            summary = alert.get('summary', 'No summary available.')
+            alert_json = html.escape(json.dumps(alert, indent=2))
+            
+            html_content += f"""
+            <div class="alert-card">
+                <div class="alert-header">
+                    <div class="alert-title">Alert {i}: {name}</div>
+                    {format_risk_badge(risk)}
+                </div>
+                <details>
+                    <summary class="collapsible" style="cursor: pointer; color: #667eea; margin: 10px 0;">📋 View Alert Details</summary>
+                    <div class="alert-details"><pre>{alert_json}</pre></div>
+                </details>
+                <div class="alert-summary">
+                    <strong>Summary:</strong><br>
+                    <div style="margin-top: 10px;">{format_summary_text(summary)}</div>
+                </div>
+            </div>
+"""
+    else:
+        html_content += '<div class="empty-state">No resolved alerts.</div>'
+    
+    html_content += """
+        </div>
+"""
+    
+    # Common/Older Alerts Section
+    html_content += f"""
+        <div class="section common">
+            <h2>⚙️ Existing Alerts ({common_count})</h2>
+"""
+    if common_alerts_parsed:
+        for i, alert in enumerate(common_alerts_parsed, 1):
+            risk = alert.get('risk', 'Unknown')
+            name = html.escape(str(alert.get('name', 'Unknown Alert')))
+            summary = alert.get('summary', 'No summary available.')
+            alert_json = html.escape(json.dumps(alert, indent=2))
+            
+            html_content += f"""
+            <div class="alert-card">
+                <div class="alert-header">
+                    <div class="alert-title">Alert {i}: {name}</div>
+                    {format_risk_badge(risk)}
+                </div>
+                <details>
+                    <summary class="collapsible" style="cursor: pointer; color: #667eea; margin: 10px 0;">📋 View Alert Details</summary>
+                    <div class="alert-details"><pre>{alert_json}</pre></div>
+                </details>
+                <div class="alert-summary">
+                    <strong>Summary:</strong><br>
+                    <div style="margin-top: 10px;">{format_summary_text(summary)}</div>
+                </div>
+            </div>
+"""
+    else:
+        html_content += '<div class="empty-state">No existing alerts.</div>'
+    
+    html_content += """
+        </div>
+"""
+    
+    # Final Summary Section
+    html_content += """
+        <div class="summary-section">
+            <h2>📊 Final Summary</h2>
+"""
+    
+    if new_final_summary:
+        html_content += f"""
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #dc3545; margin-bottom: 10px;">🆕 New Alerts Summary</h3>
+                <div class="summary-content">{format_summary_text(new_final_summary)}</div>
+            </div>
+"""
+    
+    if common_final_summary:
+        html_content += f"""
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #ffc107; margin-bottom: 10px;">⚙️ Existing Alerts Summary</h3>
+                <div class="summary-content">{format_summary_text(common_final_summary)}</div>
+            </div>
+"""
+    
+    if resolved_final_summary:
+        html_content += f"""
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #28a745; margin-bottom: 10px;">✅ Resolved Alerts Summary</h3>
+                <div class="summary-content">{format_summary_text(resolved_final_summary)}</div>
+            </div>
+"""
+    
+    html_content += """
+        </div>
+    </div>
+</body>
+</html>
+"""
+    
+    return html_content
 
 # Get values
 ZAP_PORT = int(os.getenv("ZAP_PORT", 8090))
@@ -138,18 +533,18 @@ if suffix == "pr":
     common_alerts_data = load_alerts("common_alerts.json")
     
     # Get summaries for each category
-    new_summaries, new_final_summary, new_fail_count = get_alert_summaries_and_final_summary(
+    new_summaries, new_final_summary, new_fail_count, new_alerts_with_summaries = get_alert_summaries_and_final_summary(
         new_alerts_data, 
         prompt_path=".security/prompts/prompt_alert.txt", 
         prompt_final_path=".security/prompts/prompt_final.txt", 
         include_pr_changes=True)
 
-    resolved_summaries, resolved_final_summary, resolved_fail_count = get_alert_summaries_and_final_summary(
+    resolved_summaries, resolved_final_summary, resolved_fail_count, resolved_alerts_with_summaries = get_alert_summaries_and_final_summary(
         resolved_alerts_data, 
         prompt_path=".security/prompts/prompt_solved_alert.txt", 
         prompt_final_path=".security/prompts/prompt_solved_final.txt")
 
-    common_summaries, common_final_summary, common_fail_count = get_alert_summaries_and_final_summary(
+    common_summaries, common_final_summary, common_fail_count, common_alerts_with_summaries = get_alert_summaries_and_final_summary(
         common_alerts_data, 
         prompt_path=".security/prompts/prompt_alert.txt", 
         prompt_final_path=".security/prompts/prompt_final.txt", 
@@ -167,35 +562,27 @@ if suffix == "pr":
     resolved_alerts_count = count_alerts("resolved_alerts.json")
     new_alerts_count = count_alerts("new_alerts.json")
     
-    # Create the structured report
-    report_content = "==== NEW ALERTS ====\n\n"
-    report_content += new_summaries if new_summaries else "No new alerts.\n"
+    # Generate HTML report
+    html_content = generate_html_report(
+        new_alerts_with_summaries if new_alerts_count > 0 else [],
+        resolved_alerts_with_summaries if resolved_alerts_count > 0 else [],
+        common_alerts_with_summaries if len(common_alerts_data) > 0 else [],
+        new_summaries,
+        resolved_summaries,
+        common_summaries,
+        new_final_summary,
+        resolved_final_summary,
+        common_final_summary,
+        new_alerts_count,
+        resolved_alerts_count,
+        len(common_alerts_data)
+    )
     
-    report_content += "\n\n==== RESOLVED ALERTS ====\n\n"
-    report_content += resolved_summaries if resolved_summaries else "No resolved alerts.\n"
+    # Write the HTML report
+    with open("security_report.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
     
-    report_content += "\n\n===== OLDER ALERTS =====\n\n"
-    report_content += common_summaries if common_summaries else "No older alerts.\n"
-    
-    report_content += "\n\n==== FINAL SUMMARY ====\n\n"
-    
-    # Combine final summaries from all categories
-    combined_final_summary = ""
-
-    if new_alerts_count > 0:
-        combined_final_summary += f"========================= 🆕 NEW ALERTS SUMMARY =========================\n{new_final_summary}\n\n"
-    if len(common_alerts_data) > 0:
-        combined_final_summary += f"========================= ⚙️ OLDER ALERTS SUMMARY =========================\n{common_final_summary}\n\n"
-    if resolved_alerts_count > 0:
-        combined_final_summary += f"========================= ✅ RESOLVED ALERTS SUMMARY =========================\n{resolved_final_summary}\n\n"
-    
-    report_content += combined_final_summary
-    
-    # Write the structured report
-    with open("security_report.txt", "w", encoding="utf-8") as f:
-        f.write(report_content)
-    
-    print(f"📄 Security report saved as: security_report.txt")
+    print(f"📄 Security report saved as: security_report.html")
 
     # ✅ Post interactive summary as PR comment with collapsible sections
     artifact_link = f"https://github.com/{GITHUB_REPO}/actions/runs/{os.getenv('GITHUB_RUN_ID')}"

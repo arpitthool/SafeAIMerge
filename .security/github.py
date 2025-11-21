@@ -25,7 +25,3 @@ def post_pr_comment(comment_body):
     else:
         print(f"Failed to post comment: {response.json()}")
 
-# Read the final security report
-with open("security_report.txt", "r") as f:
-    final_summary = f.read()
-

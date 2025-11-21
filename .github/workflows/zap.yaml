@@ -12,6 +12,7 @@ on:
   workflow_dispatch:  # Manual trigger
 
 jobs:
+
   zap_scan:
     runs-on: self-hosted
 
@@ -74,10 +75,10 @@ jobs:
         run: |
           > security_report_main.json
           > security_report_pr.json
-          > security_report.txt
           > new_alerts.json
           > resolved_alerts.json
           > common_alerts.json
+          > security_report.html
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -170,7 +171,7 @@ jobs:
         with:
           name: security-report
           path: |
-            security_report.txt
+            security_report.html
             security_report_pr.json
             # security_report_main.json
             # new_alerts.json
