@@ -2,6 +2,8 @@
 
 ![ZAP-LLM-tool - block-diagram](https://github.com/user-attachments/assets/855aad2c-0c76-4609-b951-447f8e5427b8)
 
+demo
+
 Welcome to the **CI/CD-integrated Security Scanner** — an automated system that:
 
 - 🕷️ Scans your web app using [ZAP](https://www.zaproxy.org/)
