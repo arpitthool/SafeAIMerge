@@ -610,17 +610,23 @@ if suffix == "pr":
     if not stats_parts:
         comment_body += "✅ **No security alerts found!** Great job keeping the codebase secure.\n\n"
     
-    # New Alerts Section (collapsible)
+    # New Alerts Section (collapsible) - Always show section, even if empty
     if new_alerts_count > 0:
         comment_body += "<details>\n<summary><b>🆕 New Alerts Summary</b> (" + str(new_alerts_count) + " alert" + ("s" if new_alerts_count > 1 else "") + ")</summary>\n\n"
         comment_body += "```\n" + new_final_summary + "\n```\n\n"
         comment_body += "</details>\n\n"
+    else:
+        # Show message when there are no new alerts
+        comment_body += "🆕 **New Alerts:** No new security alerts detected in this PR.\n\n"
     
-    # Resolved Alerts Section (collapsible)
+    # Resolved Alerts Section (collapsible) - Always show section, even if empty
     if resolved_alerts_count > 0:
         comment_body += "<details>\n<summary><b>✅ Resolved Alerts Summary</b> (" + str(resolved_alerts_count) + " alert" + ("s" if resolved_alerts_count > 1 else "") + ")</summary>\n\n"
         comment_body += "```\n" + resolved_final_summary + "\n```\n\n"
         comment_body += "</details>\n\n"
+    else:
+        # Show message when there are no resolved alerts
+        comment_body += "✅ **Resolved Alerts:** No security alerts were resolved in this PR.\n\n"
     
     # Older/Common Alerts Section (collapsible)
     if len(common_alerts_data) > 0:
@@ -631,4 +637,6 @@ if suffix == "pr":
     # Add download link at the bottom
     comment_body += f"---\n\n📂 **[Download Full Report]({artifact_link})**"
     
+    # Always post the PR comment, regardless of alert counts
+    print("📝 Posting PR comment...")
     post_pr_comment(comment_body)
