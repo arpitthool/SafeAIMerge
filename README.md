@@ -12,11 +12,6 @@ Welcome to the **CI/CD-integrated Security Scanner** — an automated system tha
 All of this is packaged into a **configurable, developer-friendly GitHub Action** — requiring minimal setup!
 
 ---
-## Tool Demo
-
-   https://drive.google.com/file/d/1KsJMFevws7GOrctwwYCsf6BeieYnWCf7/view?usp=sharing
-
----
 
 ## 🚀 Features
 
